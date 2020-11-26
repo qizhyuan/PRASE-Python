@@ -1,12 +1,10 @@
-from objects import KnowledgeGraph
-
 
 class Entity:
-    def __init__(self):
-        self.id: int
-        self.name: str
-        self.affiliation: KnowledgeGraph
-        self.counterpart: Entity
+    def __init__(self, idx: int, name: str, affiliation=None, counterpart=None):
+        self.id: int = idx
+        self.name: str = name
+        self.affiliation = affiliation
+        self.counterpart = counterpart
 
         self.involved_rel_set = set()
         self.involved_rel_inv_set = set()
@@ -15,3 +13,25 @@ class Entity:
         self.involved_rel_dict = dict()
         self.involved_rel_inv_dict = dict()
         self.involved_attr_dict = dict()
+
+    def add_relation_as_head(self, relation, tail):
+        if self.involved_rel_set.__contains__(relation) is False:
+            self.involved_rel_set.add(relation)
+            self.involved_rel_dict[relation] = set()
+
+        self.involved_rel_dict[relation].add(tail)
+
+    def add_relation_as_tail(self, relation, head):
+        if self.involved_rel_inv_set.__contains__(relation) is False:
+            self.involved_rel_inv_set.add(relation)
+            self.involved_rel_inv_dict[relation] = set()
+
+        self.involved_rel_inv_dict[relation].add(head)
+
+    def add_attribute_tuple(self, attribute, literal):
+        if self.involved_attr_set.__contains__(attribute) is False:
+            self.involved_attr_set.add(attribute)
+            self.involved_attr_dict[attribute] = set()
+
+        self.involved_attr_dict[attribute].add(literal)
+
