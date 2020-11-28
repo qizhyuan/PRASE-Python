@@ -20,6 +20,11 @@ class KG:
         self.relation_tuple_list = list()
         self.attribute_tuple_list = list()
 
+        self.relation_set_func_ranked = list()
+        self.relation_set_func_inv_ranked = list()
+        self.attribute_set_func_ranked = list()
+        self.attribute_set_func_inv_ranked = list()
+
     def get_entity(self, name: str):
         if self.entity_dict_by_name.__contains__(name):
             return self.entity_dict_by_name.get(name)
@@ -70,12 +75,45 @@ class KG:
         val.add_attribute_tuple(entity=ent, attribute=attr)
         self.attribute_tuple_list.append((ent, attr, val))
 
+    def calculate_functionality(self):
+        for relation in self.relation_set:
+            relation.calculate_functionality()
+            self.relation_set_func_ranked.append(relation)
+            self.relation_set_func_inv_ranked.append(relation)
+        for attribute in self.attribute_set:
+            attribute.calculate_functionality()
+            self.attribute_set_func_ranked.append(attribute)
+            self.attribute_set_func_inv_ranked.append(attribute)
+        self.relation_set_func_ranked.sort(key=lambda x: x.functionality, reverse=True)
+        self.relation_set_func_inv_ranked.sort(key=lambda x: x.functionality_inv, reverse=True)
+        self.attribute_set_func_ranked.sort(key=lambda x: x.functionality, reverse=True)
+        self.attribute_set_func_inv_ranked.sort(key=lambda x: x.functionality_inv, reverse=True)
+
     def print_kg_info(self):
         print("Information of Knowledge Graph (" + str(self.name) + "):")
-        print("Relation Tuple Number: " + str(len(self.relation_tuple_list)))
-        print("Attribute Tuple Number: " + str(len(self.attribute_tuple_list)))
-        print("Entity Number: " + str(len(self.entity_set)))
-        print("Relation Number: " + str(len(self.relation_set)))
-        print("Attribute Number: " + str(len(self.attribute_set)))
-        print("Literal Number: " + str(len(self.literal_set)))
+        print("- Relation Tuple Number: " + str(len(self.relation_tuple_list)))
+        print("- Attribute Tuple Number: " + str(len(self.attribute_tuple_list)))
+        print("- Entity Number: " + str(len(self.entity_set)))
+        print("- Relation Number: " + str(len(self.relation_set)))
+        print("- Attribute Number: " + str(len(self.attribute_set)))
+        print("- Literal Number: " + str(len(self.literal_set)))
+        print("- Functionality Statistics:")
+        print("--- TOP-10 Relations (Func) ---")
+        for i in range(min(10, len(self.relation_set_func_ranked))):
+            relation = self.relation_set_func_ranked[i]
+            print("Name: " + relation.name + "\tFunc: " + str(relation.functionality))
 
+        print("--- TOP-10 Relations (Func-Inv) ---")
+        for i in range(min(10, len(self.relation_set_func_inv_ranked))):
+            relation = self.relation_set_func_inv_ranked[i]
+            print("Name: " + relation.name + "\tFunc-Inv: " + str(relation.functionality_inv))
+
+        print("--- TOP-10 Attributes (Func) ---")
+        for i in range(min(10, len(self.attribute_set_func_ranked))):
+            attribute = self.attribute_set_func_ranked[i]
+            print("Name: " + attribute.name + "\tFunc: " + str(attribute.functionality))
+
+        print("--- TOP-10 Attributes (Func-Inv) ---")
+        for i in range(min(10, len(self.attribute_set_func_inv_ranked))):
+            attribute = self.attribute_set_func_inv_ranked[i]
+            print("Name: " + attribute.name + "\tFunc-Inv: " + str(attribute.functionality_inv))

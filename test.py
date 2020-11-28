@@ -1,4 +1,5 @@
 from objects.KG import KG
+from config.PARISConfig import PARISConfig
 
 path_r = "dataset/D_W_15K_V1/rel_triples_1"
 path_a = "dataset/D_W_15K_V1/attr_triples_1"
@@ -17,4 +18,8 @@ with open(path_a, "r", encoding="utf-8") as f:
         e, a, v = params[0].strip(), params[1].strip(), params[2].strip()
         kg.insert_attribute_tuple(e, a, v)
 
+kg.calculate_functionality()
 kg.print_kg_info()
+
+config = PARISConfig()
+print(config.get_similarity("Saturday", "Sundays"))
