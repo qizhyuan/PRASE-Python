@@ -25,6 +25,8 @@ class KG:
         self.attribute_set_func_ranked = list()
         self.attribute_set_func_inv_ranked = list()
 
+        self.literal_dict_by_len = dict()
+
     def get_entity(self, name: str):
         if self.entity_dict_by_name.__contains__(name):
             return self.entity_dict_by_name.get(name)
@@ -59,6 +61,10 @@ class KG:
             literal = Literal(name=name, affiliation=self)
             self.literal_set.add(literal)
             self.literal_dict_by_name[name] = literal
+            value = literal.value
+            if self.literal_dict_by_len.__contains__(len(value)) is False:
+                self.literal_dict_by_len[value] = set()
+            self.literal_dict_by_len[value].add(literal)
             return literal
 
     def insert_relation_tuple(self, head: str, relation: str, tail: str):
