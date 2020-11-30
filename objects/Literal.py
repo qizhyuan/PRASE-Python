@@ -2,19 +2,22 @@ import re
 
 
 class Literal:
-    def __init__(self, name: str, affiliation=None, pattern=r'"?([^"]*)"?(.*)'):
-        self.name: str = name
+    def __init__(self, name: str, preprocess_func, affiliation=None):
+        self._type = "LITERAL"
+        self.name: str = name.strip()
         self.value = None
+        self.preprocess_func = preprocess_func
         self.affiliation = affiliation
-        self.pattern = pattern
 
         self.involved_entity_set = set()
         self.involved_attr_set = set()
         self.__init()
 
     def __init(self):
-        matchObj = re.match(self.pattern, self.name)
-        self.value = matchObj.group(1)
+        self.value = self.preprocess_func(self.name)
+
+    def get_type(self):
+        return self._type
 
     def add_attribute_tuple(self, entity, attribute):
         self.involved_entity_set.add(entity)

@@ -1,10 +1,15 @@
+import re
+
 
 class Entity:
-    def __init__(self, idx: int, name: str, affiliation=None, counterpart=None):
+    def __init__(self, idx: int, name: str, preprocess_func, affiliation=None):
+        self._type = "ENTITY"
         self.id: int = idx
-        self.name: str = name
+        self.name: str = name.strip()
+        self.value = None
+        self.preprocess_func = preprocess_func
         self.affiliation = affiliation
-        self.counterpart = counterpart
+        # self.counterpart = counterpart
 
         self.involved_rel_set = set()
         self.involved_rel_inv_set = set()
@@ -13,6 +18,13 @@ class Entity:
         self.involved_rel_dict = dict()
         self.involved_rel_inv_dict = dict()
         self.involved_attr_dict = dict()
+        self.__init()
+
+    def __init(self):
+        self.value = self.preprocess_func(self.name)
+
+    def get_type(self):
+        return self._type
 
     def add_relation_as_head(self, relation, tail):
         if self.involved_rel_set.__contains__(relation) is False:

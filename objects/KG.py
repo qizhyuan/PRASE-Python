@@ -1,3 +1,4 @@
+import re
 from objects.Entity import Entity
 from objects.Relation import Relation
 from objects.Attribute import Attribute
@@ -5,17 +6,23 @@ from objects.Literal import Literal
 
 
 class KG:
-    def __init__(self, name="KG"):
+    def __init__(self, name="KG", ent_pre_func=None, rel_pre_func=None, attr_pre_func=None,
+                 lite_pre_func=None):
         self.name = name
+        self.ent_pre_func = ent_pre_func
+        self.rel_pre_func = rel_pre_func
+        self.attr_pre_func = attr_pre_func
+        self.lite_pre_func = lite_pre_func
+
         self.entity_set = set()
         self.relation_set = set()
         self.attribute_set = set()
         self.literal_set = set()
 
-        self.entity_dict_by_name = dict()
-        self.relation_dict_by_name = dict()
-        self.attribute_dict_by_name = dict()
-        self.literal_dict_by_name = dict()
+        self.entity_dict_by_value = dict()
+        self.relation_dict_by_value = dict()
+        self.attribute_dict_by_value = dict()
+        self.literal_dict_by_value = dict()
 
         self.relation_tuple_list = list()
         self.attribute_tuple_list = list()
@@ -27,40 +34,81 @@ class KG:
 
         self.literal_dict_by_len = dict()
 
+        self.__init()
+
+    def __init(self):
+        def default_pre_func(name: str):
+            pattern = r'"?<?([^">]*)>?"?.*'
+            matchObj = re.match(pattern=pattern, string=name)
+            if matchObj is None:
+                print("Match Error: " + name)
+                return name
+            value = matchObj.group(1).strip()
+            if "/" in value:
+                value = value.split(sep="/")[-1].strip()
+            return value
+
+        def default_pre_func_for_literal(name: str):
+            value = name.split("^")[0].strip()
+            start, end = 0, len(value) - 1
+            if start < len(value) and value[start] == '<':
+                start += 1
+            if end > 0 and value[end] == '>':
+                end -= 1
+            if start < len(value) and value[start] == '"':
+                start += 1
+            if end > 0 and value[end] == '"':
+                end -= 1
+            if start > end:
+                print("Match Error: " + name)
+                return name
+
+            value = value[start: end + 1].strip()
+            return value
+
+        if self.ent_pre_func is None:
+            self.ent_pre_func = default_pre_func
+        if self.rel_pre_func is None:
+            self.rel_pre_func = default_pre_func
+        if self.attr_pre_func is None:
+            self.attr_pre_func = default_pre_func
+        if self.lite_pre_func is None:
+            self.lite_pre_func = default_pre_func_for_literal
+
     def get_entity(self, name: str):
-        if self.entity_dict_by_name.__contains__(name):
-            return self.entity_dict_by_name.get(name)
+        if self.entity_dict_by_value.__contains__(name):
+            return self.entity_dict_by_value.get(name)
         else:
-            entity = Entity(idx=len(self.entity_set), name=name, affiliation=self)
+            entity = Entity(idx=len(self.entity_set), name=name, preprocess_func=self.ent_pre_func, affiliation=self)
             self.entity_set.add(entity)
-            self.entity_dict_by_name[name] = entity
+            self.entity_dict_by_value[name] = entity
             return entity
 
     def get_relation(self, name: str):
-        if self.relation_dict_by_name.__contains__(name):
-            return self.relation_dict_by_name.get(name)
+        if self.relation_dict_by_value.__contains__(name):
+            return self.relation_dict_by_value.get(name)
         else:
-            relation = Relation(idx=len(self.relation_set), name=name, affiliation=self)
+            relation = Relation(idx=len(self.relation_set), name=name, preprocess_func=self.rel_pre_func, affiliation=self)
             self.relation_set.add(relation)
-            self.relation_dict_by_name[name] = relation
+            self.relation_dict_by_value[name] = relation
             return relation
 
     def get_attribute(self, name: str):
-        if self.attribute_dict_by_name.__contains__(name):
-            return self.attribute_dict_by_name.get(name)
+        if self.attribute_dict_by_value.__contains__(name):
+            return self.attribute_dict_by_value.get(name)
         else:
-            attribute = Attribute(idx=len(self.attribute_set), name=name, affiliation=self)
+            attribute = Attribute(idx=len(self.attribute_set), name=name, preprocess_func=self.attr_pre_func, affiliation=self)
             self.attribute_set.add(attribute)
-            self.attribute_dict_by_name[name] = attribute
+            self.attribute_dict_by_value[name] = attribute
             return attribute
 
     def get_literal(self, name: str):
-        if self.literal_dict_by_name.__contains__(name):
-            return self.literal_dict_by_name.get(name)
+        if self.literal_dict_by_value.__contains__(name):
+            return self.literal_dict_by_value.get(name)
         else:
-            literal = Literal(name=name, affiliation=self)
+            literal = Literal(name=name, preprocess_func=self.lite_pre_func, affiliation=self)
             self.literal_set.add(literal)
-            self.literal_dict_by_name[name] = literal
+            self.literal_dict_by_value[name] = literal
             value = literal.value
             if self.literal_dict_by_len.__contains__(len(value)) is False:
                 self.literal_dict_by_len[value] = set()
@@ -96,7 +144,7 @@ class KG:
         self.attribute_set_func_inv_ranked.sort(key=lambda x: x.functionality_inv, reverse=True)
 
     def print_kg_info(self):
-        print("Information of Knowledge Graph (" + str(self.name) + "):")
+        print("\nInformation of Knowledge Graph (" + str(self.name) + "):")
         print("- Relation Tuple Number: " + str(len(self.relation_tuple_list)))
         print("- Attribute Tuple Number: " + str(len(self.attribute_tuple_list)))
         print("- Entity Number: " + str(len(self.entity_set)))
