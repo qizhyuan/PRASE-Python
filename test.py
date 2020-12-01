@@ -33,6 +33,7 @@ kg1 = construct_kg(path_r_1, path_a_1, "KG1")
 kg2 = construct_kg(path_r_2, path_a_2, "KG2")
 
 kgs = KGs(kg1=kg1, kg2=kg2)
+kgs.run()
 kgs.print_alignment_result()
 
 

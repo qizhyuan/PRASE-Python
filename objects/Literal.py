@@ -9,7 +9,7 @@ class Literal:
         self.preprocess_func = preprocess_func
         self.affiliation = affiliation
 
-        self.involved_entity_set = set()
+        self.neighbor_set_inv = set()
         self.involved_attr_set = set()
         self.__init()
 
@@ -20,5 +20,5 @@ class Literal:
         return self._type
 
     def add_attribute_tuple(self, entity, attribute):
-        self.involved_entity_set.add(entity)
+        self.neighbor_set_inv.add(entity)
         self.involved_attr_set.add(attribute)

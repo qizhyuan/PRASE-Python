@@ -18,6 +18,10 @@ class Entity:
         self.involved_rel_dict = dict()
         self.involved_rel_inv_dict = dict()
         self.involved_attr_dict = dict()
+
+        self.neighbor_set = set()
+        self.neighbor_set_inv = set()
+
         self.__init()
 
     def __init(self):
@@ -32,6 +36,7 @@ class Entity:
             self.involved_rel_dict[relation] = set()
 
         self.involved_rel_dict[relation].add(tail)
+        self.neighbor_set.add(tail)
 
     def add_relation_as_tail(self, relation, head):
         if self.involved_rel_inv_set.__contains__(relation) is False:
@@ -39,6 +44,7 @@ class Entity:
             self.involved_rel_inv_dict[relation] = set()
 
         self.involved_rel_inv_dict[relation].add(head)
+        self.neighbor_set_inv.add(head)
 
     def add_attribute_tuple(self, attribute, literal):
         if self.involved_attr_set.__contains__(attribute) is False:
