@@ -9,8 +9,11 @@ class Literal:
         self.preprocess_func = preprocess_func
         self.affiliation = affiliation
 
-        self.neighbor_set_inv = set()
-        self.involved_attr_set = set()
+        self.involved_as_tail_dict = dict()
+        self.involved_as_head_dict = dict()
+
+        self.neighbored_as_tail = set()
+
         self.__init()
 
     def __init(self):
@@ -20,5 +23,9 @@ class Literal:
         return self._type
 
     def add_attribute_tuple(self, entity, attribute):
-        self.neighbor_set_inv.add(entity)
-        self.involved_attr_set.add(attribute)
+        if self.involved_as_tail_dict.__contains__(attribute) is False:
+            self.involved_as_tail_dict[attribute] = set()
+        self.involved_as_tail_dict[attribute].add(entity)
+        self.neighbored_as_tail.add(entity)
+
+

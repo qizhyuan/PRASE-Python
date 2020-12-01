@@ -131,3 +131,5 @@ dmypy.json
 .idea/
 
 dataset/
+
+alignment_result.txt
