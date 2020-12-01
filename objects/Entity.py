@@ -1,6 +1,3 @@
-import re
-
-
 class Entity:
     def __init__(self, idx: int, name: str, preprocess_func, affiliation=None):
         self._type = "ENTITY"

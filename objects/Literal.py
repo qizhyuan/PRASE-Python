@@ -1,6 +1,3 @@
-import re
-
-
 class Literal:
     def __init__(self, name: str, preprocess_func, affiliation=None):
         self._type = "LITERAL"

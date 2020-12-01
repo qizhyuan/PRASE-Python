@@ -1,6 +1,5 @@
 from objects.KG import KG
 from objects.KGs import KGs
-from config.PARISConfig import PARISConfig
 
 
 def construct_kg(path_r, path_a, name=None):

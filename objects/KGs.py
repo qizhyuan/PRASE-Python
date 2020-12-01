@@ -9,7 +9,7 @@ class KGs:
         self.threshold = 0.1
         self.ent_lite_candidate_num = 5
         self.rel_attr_candidate_num = 3
-        self.iteration = 1
+        self.iteration = 3
 
         self.ent_lite_align_candidate_dict = dict()
         self.rel_attr_align_candidate_dict = dict()
