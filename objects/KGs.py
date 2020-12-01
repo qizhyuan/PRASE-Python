@@ -60,9 +60,9 @@ class KGs:
                                 self.ent_lite_align_refined_dict[obj_l_neighbor] = set()
                             self.ent_lite_align_candidate_dict[obj_l_neighbor].add(obj_r_neighbor)
                             self.refined_tuple_candidate_dict[(obj_l_neighbor, obj_r_neighbor)] = p_lr
-                            self.refined_tuple_candidate_dict[(obj_l_neighbor, obj_r_neighbor)] = p_lr
+                            self.refined_tuple_candidate_dict[(obj_r_neighbor, obj_l_neighbor)] = p_lr
                         visited.add((obj_l_neighbor, obj_r_neighbor))
-                        visited.add((obj_l_neighbor, obj_r_neighbor))
+                        visited.add((obj_r_neighbor, obj_l_neighbor))
         print("relation alignment...")
         for relation_l in self.kg_l.relation_set:
             for relation_r in self.kg_r.relation_set:
