@@ -84,6 +84,7 @@ class KGs:
                         prob_lr = self.__rel_or_attr_align_prob(obj_l_rel, obj_r_rel)
                         prob_rl = self.__rel_or_attr_align_prob(obj_r_rel, obj_l_rel)
                         if prob_lr >= self.threshold or prob_rl >= self.threshold:
+                            print(obj_l_rel.name + "\t" + obj_r_rel.name + "\t" + str(prob_lr))
                             self.refined_tuple_candidate_dict[(obj_l_rel, obj_r_rel)] = prob_lr
                             self.refined_tuple_candidate_dict[(obj_r_rel, obj_l_rel)] = prob_rl
                             if self.rel_attr_align_candidate_dict.__contains__(obj_l_rel) is False:
