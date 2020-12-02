@@ -22,11 +22,11 @@ def construct_kg(path_r, path_a, name=None):
     return kg
 
 
-path_r_1 = "dataset/EN_FR_15K_V1/rel_triples_1"
-path_a_1 = "dataset/EN_FR_15K_V1/attr_triples_1"
+path_r_1 = "dataset/EN_DE_15K_V1/rel_triples_1"
+path_a_1 = "dataset/EN_DE_15K_V1/attr_triples_1"
 
-path_r_2 = "dataset/EN_FR_15K_V1/rel_triples_2"
-path_a_2 = "dataset/EN_FR_15K_V1/attr_triples_2"
+path_r_2 = "dataset/EN_DE_15K_V1/rel_triples_2"
+path_a_2 = "dataset/EN_DE_15K_V1/attr_triples_2"
 
 kg1 = construct_kg(path_r_1, path_a_1, "KG1")
 kg2 = construct_kg(path_r_2, path_a_2, "KG2")
