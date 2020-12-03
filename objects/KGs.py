@@ -270,12 +270,11 @@ class KGs:
     def __get_align_prob(self, obj_l, obj_r):
         return self.refined_tuple_dict.get((obj_l, obj_r), 0.0)
 
-    def __dict_result_handler(self, refined_dict, obj_type: str, threshold=0.0):
+    def __ent_lite_dict_result_handler(self, refined_dict, obj_type: str, threshold=0.0):
         result_dict_first, result_dict_second = dict(), dict()
         for (obj, counterpart_dict) in refined_dict.items():
             if obj.affiliation is self.kg_r:
-                if obj_type == "ENTITY" or obj_type == "LITERAL":
-                    continue
+                continue
             counterpart, prob_max = None, None
             for (candidate, prob) in counterpart_dict.items():
                 if counterpart is None:
@@ -291,6 +290,33 @@ class KGs:
                 else:
                     result_dict_second[obj] = counterpart
         return result_dict_first, result_dict_second
+
+    def __rel_attr_dict_result_handler(self, refined_dict, obj_type: str, threshold=0.0):
+        result_dict_first, result_dict_inv_first = dict(), dict()
+        result_dict_second, result_dict_inv_second = dict(), dict()
+        for (obj, counterpart_dict) in refined_dict.items():
+            counterpart, prob_max = None, None
+            for (candidate, prob) in counterpart_dict.items():
+                if counterpart is None:
+                    counterpart = candidate
+                    prob_max = prob
+                if prob > prob_max:
+                    counterpart = candidate
+            if counterpart is not None:
+                if prob_max < threshold:
+                    continue
+                if obj.get_type() == obj_type:
+                    if obj.affiliation is self.kg_l:
+                        result_dict_first[obj] = counterpart
+                    else:
+                        result_dict_inv_first[obj] = counterpart
+                else:
+                    if obj.affiliation is self.kg_l:
+                        result_dict_second[obj] = counterpart
+                    else:
+                        result_dict_inv_second[obj] = counterpart
+
+        return result_dict_first, result_dict_second, result_dict_inv_first, result_dict_inv_second
 
     def __result_writer(self, f, result_dict, title):
         f.write("--- " + title + " ---\n")
@@ -352,13 +378,16 @@ class KGs:
         return
 
     def output_alignment_result(self, path="output/EA_Result.txt"):
-        ent_result_dict, lite_result_dict = self.__dict_result_handler(self.ent_lite_align_refined_dict, "ENTITY",
-                                                                       threshold=self.output_threshold)
-        rel_result_dict, attr_result_dict = self.__dict_result_handler(self.rel_attr_align_refined_dict, "RELATION")
+        ent_result_dict, lite_result_dict = self.__ent_lite_dict_result_handler(
+            self.ent_lite_align_refined_dict, "ENTITY", threshold=self.output_threshold)
+        rel_result_dict, attr_result_dict, rel_result_inv_dict, attr_result_inv_dict = \
+            self.__rel_attr_dict_result_handler(self.rel_attr_align_refined_dict, "RELATION")
 
         with open(path, "w+", encoding="utf8") as f:
             f.write("Alignment Result:\n")
             self.__result_writer(f, attr_result_dict, "Attribute Alignment")
+            self.__result_writer(f, attr_result_inv_dict, "Attribute INV Alignment")
             self.__result_writer(f, rel_result_dict, "Relation Alignment")
+            self.__result_writer(f, rel_result_inv_dict, "Relation INV Alignment")
             self.__result_writer(f, lite_result_dict, "Literal Alignment")
             self.__result_writer(f, ent_result_dict, "Entity Alignment")
