@@ -81,16 +81,16 @@ class KGs:
         print("Entity and Literal Alignment...")
         self.__ent_lite_align_per_iteration(init)
 
-        print("refining...")
+        print("Refining...")
         self.__refine_ent_lite_candidate()
 
-        print("relation and attribute alignment...")
+        print("Relation and Attribute Alignment...")
         self.__rel_attr_align_per_iteration()
 
-        print("refining...")
+        print("Refining...")
         self.__refine_rel_attr_candidate()
         self.__clear_candidate_dict()
-        print("complete an iteration!")
+        print("Complete an Iteration!")
         return
 
     def __refine_ent_lite_candidate(self):
@@ -319,20 +319,21 @@ class KGs:
         return result_dict_first, result_dict_second, result_dict_inv_first, result_dict_inv_second
 
     def __result_writer(self, f, result_dict, title):
-        f.write("--- " + title + " ---\n")
+        f.write("--- " + title + " ---\n\n")
         for (obj_l, obj_r) in result_dict.items():
             f.write(obj_l.name + "\t" + obj_r.name + "\t" + str(
                 self.refined_tuple_dict[(obj_l, obj_r)]) + "\n")
+        f.write("\n")
 
     def run(self):
-        print("start...")
+        print("Start...")
         for i in range(self.iteration):
             print(str(i + 1) + "-th iteration......")
-            if i == 0:
+            if i == 0 and len(self.rel_attr_align_refined_dict) == 0:
                 self.__run_per_iteration(init=True)
             else:
                 self.__run_per_iteration()
-        print("PARIS completed!")
+        print("PARIS Completed!")
 
     @staticmethod
     def __store_params_writer(tuple_set, path):
@@ -374,8 +375,102 @@ class KGs:
         self.__store_params_writer(rel_inv_align_tuple_set, os.path.join(path, "rel_inv_align_tuple_set"))
         self.__store_params_writer(attr_inv_align_tuple_set, os.path.join(path, "attr_inv_align_tuple_set"))
 
-    def load_params(self):
+    def load_params(self, path="output/"):
+        self.__load_params_helper(os.path.join(path, "ent_align_tuple_set"), "ENTITY")
+        self.__load_params_helper(os.path.join(path, "lite_align_tuple_set"), "LITERAL")
+        self.__load_params_helper(os.path.join(path, "rel_align_tuple_set"), "RELATION")
+        self.__load_params_helper(os.path.join(path, "rel_inv_align_tuple_set"), "RELATION", inv=True)
+        self.__load_params_helper(os.path.join(path, "attr_align_tuple_set"), "ATTRIBUTE")
+        self.__load_params_helper(os.path.join(path, "attr_inv_align_tuple_set"), "ATTRIBUTE", inv=True)
         return
+
+    def __load_params_helper(self, path, data_type, inv=False):
+        with open(path, "r", encoding="utf8") as f:
+            for line in f.readlines():
+                params = str.strip(line).split(sep="\t")
+                if len(params) != 3:
+                    continue
+                obj_l, obj_r, prob = params[0].strip(), params[1].strip(), float(params[2].strip())
+                if data_type == "ENTITY":
+                    self.insert_ent_tuple(obj_l, obj_r, prob)
+                if data_type == "LITERAL":
+                    self.insert_lite_tuple(obj_l, obj_r, prob)
+                if data_type == "RELATION":
+                    self.insert_rel_tuple(obj_l, obj_r, prob, inv)
+                if data_type == "ATTRIBUTE":
+                    self.insert_attr_tuple(obj_l, obj_r, prob, inv)
+
+    def insert_ent_tuple(self, ent_l: str, ent_r: str, prob=1.0):
+        obj_l, obj_r = self.kg_l.entity_dict_by_value.get(ent_l.strip()), self.kg_r.entity_dict_by_value.get(ent_r.strip())
+        if obj_l is None:
+            print("Exception: fail to load Entity (" + ent_l + ")")
+        if obj_r is None:
+            print("Exception: fail to load Entity (" + ent_r + ")")
+        if obj_l is None or obj_r is None:
+            return
+        prob = float(prob)
+        self.__insert_ent_or_lite_tuple(obj_l, obj_r, prob)
+
+    def insert_lite_tuple(self, lite_l: str, lite_r: str, prob=1.0):
+        obj_l, obj_r = self.kg_l.literal_dict_by_value.get(lite_l.strip()), self.kg_r.literal_dict_by_value.get(
+            lite_r.strip())
+        if obj_l is None:
+            print("Exception: fail to load Literal (" + lite_l + ")")
+        if obj_r is None:
+            print("Exception: fail to load Literal (" + lite_r + ")")
+        if obj_l is None or obj_r is None:
+            return
+        prob = float(prob)
+        self.__insert_ent_or_lite_tuple(obj_l, obj_r, prob)
+
+    def insert_rel_tuple(self, rel_l: str, rel_r: str, prob=1.0, inv=False):
+        if inv:
+            rel_l, rel_r = rel_r, rel_l
+        obj_l, obj_r = self.kg_l.relation_dict_by_value.get(rel_l.strip()), self.kg_r.relation_dict_by_value.get(
+            rel_r.strip())
+        if obj_l is None:
+            print("Exception: fail to load Relation (" + rel_l + ")")
+        if obj_r is None:
+            print("Exception: fail to load Relation (" + rel_r + ")")
+        if obj_l is None or obj_r is None:
+            return
+        prob = float(prob)
+        if inv:
+            self.__insert_rel_attr_tuple(obj_r, obj_l, prob)
+        else:
+            self.__insert_rel_attr_tuple(obj_l, obj_r, prob)
+
+    def insert_attr_tuple(self, attr_l: str, attr_r: str, prob=1.0, inv=False):
+        if inv:
+            attr_l, attr_r = attr_r, attr_l
+        obj_l, obj_r = self.kg_l.attribute_dict_by_value.get(attr_l.strip()), self.kg_r.attribute_dict_by_value.get(
+            attr_r.strip())
+        if obj_l is None:
+            print("Exception: fail to load Attribute (" + attr_l + ")")
+        if obj_r is None:
+            print("Exception: fail to load Attribute (" + attr_r + ")")
+        if obj_l is None or obj_r is None:
+            return
+        prob = float(prob)
+        if inv:
+            self.__insert_rel_attr_tuple(obj_r, obj_l, prob)
+        else:
+            self.__insert_rel_attr_tuple(obj_l, obj_r, prob)
+
+    def __insert_ent_or_lite_tuple(self, obj_l, obj_r, prob):
+        if self.ent_lite_align_refined_dict.__contains__(obj_l) is False:
+            self.ent_lite_align_refined_dict[obj_l] = dict()
+        if self.ent_lite_align_refined_dict.__contains__(obj_r) is False:
+            self.ent_lite_align_refined_dict[obj_r] = dict()
+        self.ent_lite_align_refined_dict[obj_l][obj_r] = prob
+        self.ent_lite_align_refined_dict[obj_r][obj_l] = prob
+        self.refined_tuple_dict[(obj_l, obj_r)] = prob
+
+    def __insert_rel_attr_tuple(self, obj_l, obj_r, prob):
+        if self.rel_attr_align_refined_dict.__contains__(obj_l) is False:
+            self.rel_attr_align_refined_dict[obj_l] = dict()
+        self.rel_attr_align_refined_dict[obj_l][obj_r] = prob
+        self.refined_tuple_dict[(obj_l, obj_r)] = prob
 
     def output_alignment_result(self, path="output/EA_Result.txt"):
         ent_result_dict, lite_result_dict = self.__ent_lite_dict_result_handler(
@@ -384,7 +479,7 @@ class KGs:
             self.__rel_attr_dict_result_handler(self.rel_attr_align_refined_dict, "RELATION")
 
         with open(path, "w+", encoding="utf8") as f:
-            f.write("Alignment Result:\n")
+            f.write("Alignment Result:\n\n")
             self.__result_writer(f, attr_result_dict, "Attribute Alignment")
             self.__result_writer(f, attr_result_inv_dict, "Attribute INV Alignment")
             self.__result_writer(f, rel_result_dict, "Relation Alignment")
