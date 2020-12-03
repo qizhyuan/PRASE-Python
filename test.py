@@ -22,32 +22,35 @@ def construct_kg(path_r, path_a, name=None):
     return kg
 
 
-path_r_1 = "dataset/EN_DE_15K_V1/rel_triples_1"
-path_a_1 = "dataset/EN_DE_15K_V1/attr_triples_1"
+path_r_1 = "dataset/EN_DE_15K_V2/rel_triples_1"
+path_a_1 = "dataset/EN_DE_15K_V2/attr_triples_1"
 
-path_r_2 = "dataset/EN_DE_15K_V1/rel_triples_2"
-path_a_2 = "dataset/EN_DE_15K_V1/attr_triples_2"
+path_r_2 = "dataset/EN_DE_15K_V2/rel_triples_2"
+path_a_2 = "dataset/EN_DE_15K_V2/attr_triples_2"
+
+path_validation = "dataset/EN_DE_15K_V2/ent_links"
 
 kg1 = construct_kg(path_r_1, path_a_1, "KG1")
 kg2 = construct_kg(path_r_2, path_a_2, "KG2")
 
-kgs = KGs(kg1=kg1, kg2=kg2, iteration=1, ent_lite_candidate_num=2, rel_attr_candidate_num=3, output_threshold=0, refine_threshold=0.1)
+kgs = KGs(kg1=kg1, kg2=kg2, iteration=1, ent_lite_candidate_num=3, rel_attr_candidate_num=3, output_threshold=0.3, refine_threshold=0.1)
 
 # kgs.run()
 # kgs.load_params()
 
-path_test = "dataset/industry/ent_links"
-with open(path_test, "r", encoding="utf-8") as f:
-    num = 2000
-    for line in f.readlines():
-        params = str.strip(line).split(sep='\t')
-        assert len(params) == 2
-        e, a = params[0].strip(), params[1].strip()
-        kgs.insert_ent_tuple(e, a, 1.0)
-        num -= 1
-        if num <= 0:
-            break
-
+# path_test = "dataset/industry/ent_links"
+# with open(path_test, "r", encoding="utf-8") as f:
+#     num = 2000
+#     for line in f.readlines():
+#         params = str.strip(line).split(sep='\t')
+#         assert len(params) == 2
+#         e, a = params[0].strip(), params[1].strip()
+#         kgs.insert_ent_tuple(e, a, 1.0)
+#         num -= 1
+#         if num <= 0:
+#             break
+# kgs.load_params()
 kgs.run()
-kgs.output_alignment_result()
+kgs.validate(path_validation)
+# kgs.store_results()
 # kgs.store_params()

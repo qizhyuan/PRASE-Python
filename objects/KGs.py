@@ -472,11 +472,15 @@ class KGs:
         self.rel_attr_align_refined_dict[obj_l][obj_r] = prob
         self.refined_tuple_dict[(obj_l, obj_r)] = prob
 
-    def output_alignment_result(self, path="output/EA_Result.txt"):
+    def store_results(self, path="output/EA_Result.txt"):
         ent_result_dict, lite_result_dict = self.__ent_lite_dict_result_handler(
             self.ent_lite_align_refined_dict, "ENTITY", threshold=self.output_threshold)
         rel_result_dict, attr_result_dict, rel_result_inv_dict, attr_result_inv_dict = \
             self.__rel_attr_dict_result_handler(self.rel_attr_align_refined_dict, "RELATION")
+
+        base, _ = os.path.split(path)
+        if not os.path.exists(base):
+            os.makedirs(base)
 
         with open(path, "w+", encoding="utf8") as f:
             f.write("Alignment Result:\n\n")
@@ -486,3 +490,45 @@ class KGs:
             self.__result_writer(f, rel_result_inv_dict, "Relation INV Alignment")
             self.__result_writer(f, lite_result_dict, "Literal Alignment")
             self.__result_writer(f, ent_result_dict, "Entity Alignment")
+
+    def validate(self, path):
+        correct_num, total_num = 0.0, 0.0
+        ent_align_result = set()
+        for (obj_l, obj_r_dict) in self.ent_lite_align_refined_dict.items():
+            if obj_l.get_type() == "LITERAL" or obj_l.affiliation is self.kg_r:
+                continue
+            counterpart, prob_max = None, None
+            for (candidate, prob) in obj_r_dict.items():
+                if counterpart is None:
+                    counterpart = candidate
+                    prob_max = prob
+                if prob > prob_max:
+                    counterpart = candidate
+            if counterpart is not None:
+                if prob_max < self.output_threshold:
+                    continue
+                ent_align_result.add((obj_l, counterpart))
+        if len(ent_align_result) == 0:
+            print("Exception: no satisfied alignment result with threshold=" + str(self.output_threshold))
+            return
+        with open(path, "r", encoding="utf8") as f:
+            for line in f.readlines():
+                params = str.strip(line).split("\t")
+                assert len(params) == 2
+                obj_l, ent_r = params[0].strip(), params[1].strip()
+                obj_l, obj_r = self.kg_l.entity_dict_by_value.get(obj_l), self.kg_r.entity_dict_by_value.get(ent_r)
+                if obj_l is None:
+                    print("Exception: fail to load Entity (" + obj_l + ")")
+                if obj_r is None:
+                    print("Exception: fail to load Entity (" + ent_r + ")")
+                if obj_l is None or obj_r is None:
+                    continue
+                if (obj_l, obj_r) in ent_align_result:
+                    correct_num += 1.0
+                total_num += 1.0
+
+        if total_num == 0.0:
+            print("Exception: no satisfied instance for validation")
+        else:
+            precision, recall = correct_num / len(ent_align_result), correct_num / total_num
+            print("Precision: " + str(precision) + "\tRecall: " + str(recall))
