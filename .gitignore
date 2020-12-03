@@ -133,3 +133,5 @@ dmypy.json
 dataset/
 
 alignment_result.txt
+
+output/
