@@ -1,4 +1,4 @@
-import random
+import os
 from objects.KG import KG
 
 
@@ -69,6 +69,9 @@ class KGs:
                 lite_r = self.kg_r.literal_dict_by_value[lite_l.value]
                 self.ent_lite_align_refined_dict[lite_l] = dict()
                 self.ent_lite_align_refined_dict[lite_l][lite_r] = 1.0
+                if self.ent_lite_align_refined_dict.__contains__(lite_r) is False:
+                    self.ent_lite_align_refined_dict[lite_r] = dict()
+                self.ent_lite_align_refined_dict[lite_r][lite_l] = 1.0
                 self.refined_tuple_dict[(lite_l, lite_r)] = 1.0
                 self.refined_tuple_dict[(lite_r, lite_l)] = 1.0
                 self.ent_lite_align_set.add(lite_l)
@@ -76,7 +79,7 @@ class KGs:
     def __run_per_iteration(self, init=False):
 
         print("Entity and Literal Alignment...")
-        self.__ant_lite_align_per_iteration(init)
+        self.__ent_lite_align_per_iteration(init)
 
         print("refining...")
         self.__refine_ent_lite_candidate()
@@ -113,9 +116,11 @@ class KGs:
         self.ent_lite_align_refined_dict = ent_lite_align_dict
         self.refined_tuple_dict = refined_tuple_dict
 
-    def __ant_lite_align_per_iteration(self, init=False):
+    def __ent_lite_align_per_iteration(self, init=False):
         visited = set()
         for (obj_l, obj_r_dict) in self.ent_lite_align_refined_dict.items():
+            if obj_l.affiliation is self.kg_r:
+                continue
             for (obj_r, _) in obj_r_dict.items():
                 for obj_l_neighbor in obj_l.neighbored_as_tail:
                     for obj_r_neighbor in obj_r.neighbored_as_tail:
@@ -127,7 +132,10 @@ class KGs:
                         if p_lr >= self.refine_threshold:
                             if self.ent_lite_align_candidate_dict.__contains__(obj_l_neighbor) is False:
                                 self.ent_lite_align_candidate_dict[obj_l_neighbor] = dict()
+                            if self.ent_lite_align_candidate_dict.__contains__(obj_r_neighbor) is False:
+                                self.ent_lite_align_candidate_dict[obj_r_neighbor] = dict()
                             self.ent_lite_align_candidate_dict[obj_l_neighbor][obj_r_neighbor] = p_lr
+                            self.ent_lite_align_candidate_dict[obj_r_neighbor][obj_l_neighbor] = p_lr
                             self.refined_tuple_candidate_dict[(obj_l_neighbor, obj_r_neighbor)] = p_lr
                             self.refined_tuple_candidate_dict[(obj_r_neighbor, obj_l_neighbor)] = p_lr
                         visited.add((obj_l_neighbor, obj_r_neighbor))
@@ -136,7 +144,10 @@ class KGs:
                 if prob >= self.refine_threshold:
                     if self.ent_lite_align_candidate_dict.__contains__(obj_l) is False:
                         self.ent_lite_align_candidate_dict[obj_l] = dict()
+                    if self.ent_lite_align_candidate_dict.__contains__(obj_r) is False:
+                        self.ent_lite_align_candidate_dict[obj_r] = dict()
                     self.ent_lite_align_candidate_dict[obj_l][obj_r] = prob
+                    self.ent_lite_align_candidate_dict[obj_r][obj_l] = prob
                     self.refined_tuple_candidate_dict[(obj_l, obj_r)] = prob
                     self.refined_tuple_candidate_dict[(obj_r, obj_l)] = prob
                 visited.add((obj_l, obj_r))
@@ -151,12 +162,15 @@ class KGs:
                 prob_lr = self.__rel_or_attr_align_prob(obj_l_rel, obj_r_rel)
                 prob_rl = self.__rel_or_attr_align_prob(obj_r_rel, obj_l_rel)
                 if prob_lr >= self.refine_threshold or prob_rl >= self.refine_threshold:
-                    print(obj_l_rel.name + "\t" + obj_r_rel.name + "\t" + str(prob_lr))
+                    print(obj_l_rel.name + "\t" + obj_r_rel.name + "\t" + str(prob_lr) + "\t" + str(prob_rl))
                     self.refined_tuple_candidate_dict[(obj_l_rel, obj_r_rel)] = prob_lr
                     self.refined_tuple_candidate_dict[(obj_r_rel, obj_l_rel)] = prob_rl
                     if self.rel_attr_align_candidate_dict.__contains__(obj_l_rel) is False:
                         self.rel_attr_align_candidate_dict[obj_l_rel] = dict()
+                    if self.rel_attr_align_candidate_dict.__contains__(obj_r_rel) is False:
+                        self.rel_attr_align_candidate_dict[obj_r_rel] = dict()
                     self.rel_attr_align_candidate_dict[obj_l_rel][obj_r_rel] = prob_lr
+                    self.rel_attr_align_candidate_dict[obj_r_rel][obj_l_rel] = prob_rl
                 visited.add((obj_l_rel, obj_r_rel))
 
         for obj_l_attr in self.kg_l.attribute_set:
@@ -166,12 +180,15 @@ class KGs:
                 prob_lr = self.__rel_or_attr_align_prob(obj_l_attr, obj_r_attr)
                 prob_rl = self.__rel_or_attr_align_prob(obj_r_attr, obj_l_attr)
                 if prob_lr >= self.refine_threshold or prob_rl >= self.refine_threshold:
-                    print(obj_l_attr.name + "\t" + obj_r_attr.name + "\t" + str(prob_lr))
+                    print(obj_l_attr.name + "\t" + obj_r_attr.name + "\t" + str(prob_lr) + "\t" + str(prob_rl))
                     self.refined_tuple_candidate_dict[(obj_l_attr, obj_r_attr)] = prob_lr
                     self.refined_tuple_candidate_dict[(obj_r_attr, obj_l_attr)] = prob_rl
                     if self.rel_attr_align_candidate_dict.__contains__(obj_l_attr) is False:
                         self.rel_attr_align_candidate_dict[obj_l_attr] = dict()
+                    if self.rel_attr_align_candidate_dict.__contains__(obj_r_attr) is False:
+                        self.rel_attr_align_candidate_dict[obj_r_attr] = dict()
                     self.rel_attr_align_candidate_dict[obj_l_attr][obj_r_attr] = prob_lr
+                    self.rel_attr_align_candidate_dict[obj_r_attr][obj_l_attr] = prob_rl
                 visited.add((obj_l_attr, obj_r_attr))
 
     def __refine_rel_attr_candidate(self):
@@ -253,10 +270,12 @@ class KGs:
     def __get_align_prob(self, obj_l, obj_r):
         return self.refined_tuple_dict.get((obj_l, obj_r), 0.0)
 
-    @staticmethod
-    def __dict_result_handler(refined_dict, obj_type: str, threshold=0.0):
+    def __dict_result_handler(self, refined_dict, obj_type: str, threshold=0.0):
         result_dict_first, result_dict_second = dict(), dict()
         for (obj, counterpart_dict) in refined_dict.items():
+            if obj.affiliation is self.kg_r:
+                if obj_type == "ENTITY" or obj_type == "LITERAL":
+                    continue
             counterpart, prob_max = None, None
             for (candidate, prob) in counterpart_dict.items():
                 if counterpart is None:
@@ -289,8 +308,45 @@ class KGs:
                 self.__run_per_iteration()
         print("PARIS completed!")
 
-    def store_params(self):
-        return
+    @staticmethod
+    def __store_params_writer(tuple_set, path):
+        with open(path, "w+", encoding="utf8") as f:
+            for params in tuple_set:
+                f.write('\t'.join([params[0], params[1], str(params[2])]))
+                f.write('\n')
+
+    def store_params(self, path="output/"):
+        ent_align_tuple_set, lite_align_tuple_set = set(), set()
+        rel_align_tuple_set, rel_inv_align_tuple_set = set(), set()
+        attr_align_tuple_set, attr_inv_align_tuple_set = set(), set()
+
+        for (refined_tuple, prob) in self.refined_tuple_dict.items():
+            param1, param2 = refined_tuple[0], refined_tuple[1]
+            if param1.get_type() == "ENTITY" or param1.get_type() == "LITERAL":
+                if param1.affiliation is self.kg_r:
+                    continue
+                else:
+                    if param1.get_type() == "ENTITY":
+                        ent_align_tuple_set.add((param1.name, param2.name, prob))
+                    else:
+                        lite_align_tuple_set.add((param1.name, param2.name, prob))
+            else:
+                if param1.affiliation is self.kg_l:
+                    if param1.get_type() == "RELATION":
+                        rel_align_tuple_set.add((param1.name, param2.name, prob))
+                    else:
+                        attr_align_tuple_set.add((param1.name, param2.name, prob))
+                else:
+                    if param1.get_type() == "RELATION":
+                        rel_inv_align_tuple_set.add((param1.name, param2.name, prob))
+                    else:
+                        attr_inv_align_tuple_set.add((param1.name, param2.name, prob))
+        self.__store_params_writer(ent_align_tuple_set, os.path.join(path, "ent_align_tuple_set"))
+        self.__store_params_writer(lite_align_tuple_set, os.path.join(path, "lite_align_tuple_set"))
+        self.__store_params_writer(rel_align_tuple_set, os.path.join(path, "rel_align_tuple_set"))
+        self.__store_params_writer(attr_align_tuple_set, os.path.join(path, "attr_align_tuple_set"))
+        self.__store_params_writer(rel_inv_align_tuple_set, os.path.join(path, "rel_inv_align_tuple_set"))
+        self.__store_params_writer(attr_inv_align_tuple_set, os.path.join(path, "attr_inv_align_tuple_set"))
 
     def load_params(self):
         return
