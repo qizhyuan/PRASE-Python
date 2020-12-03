@@ -6,7 +6,6 @@ class Entity:
         self.value = None
         self.preprocess_func = preprocess_func
         self.affiliation = affiliation
-        # self.counterpart = counterpart
 
         self.involved_rel_dict = dict()
         self.involved_rel_inv_dict = dict()
