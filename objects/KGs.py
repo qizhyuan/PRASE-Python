@@ -23,7 +23,7 @@ class KGs:
         self.refined_tuple_candidate_dict = dict()
         self.refined_tuple_dict = dict()
 
-        self.ent_lite_align_set = set()
+        # self.ent_lite_align_set = set()
 
         self.similarity_func = None
 
@@ -74,7 +74,8 @@ class KGs:
                 self.ent_lite_align_refined_dict[lite_r][lite_l] = 1.0
                 self.refined_tuple_dict[(lite_l, lite_r)] = 1.0
                 self.refined_tuple_dict[(lite_r, lite_l)] = 1.0
-                self.ent_lite_align_set.add(lite_l)
+                # print(lite_l.name + "\t" + lite_r.name)
+                # self.ent_lite_align_set.add(lite_l)
 
     def __run_per_iteration(self, init=False):
 
@@ -94,7 +95,7 @@ class KGs:
         return
 
     def __refine_ent_lite_candidate(self):
-        self.ent_lite_align_set = set()
+        # self.ent_lite_align_set = set()
         ent_lite_align_dict, refined_tuple_dict = dict(), dict()
         for (obj_l, obj_r_dict) in self.ent_lite_align_candidate_dict.items():
             sorted(obj_r_dict.items(), key=lambda x: x[1], reverse=True)
@@ -108,7 +109,7 @@ class KGs:
                 if candidate_num >= self.ent_lite_candidate_num:
                     break
             ent_lite_align_dict[obj_l] = refined_dict
-            self.ent_lite_align_set.add(obj_l)
+            # self.ent_lite_align_set.add(obj_l)
 
         for (obj_l, obj_r_dict) in self.rel_attr_align_refined_dict.items():
             for (obj_r, prob) in obj_r_dict.items():
@@ -162,7 +163,7 @@ class KGs:
                 prob_lr = self.__rel_or_attr_align_prob(obj_l_rel, obj_r_rel)
                 prob_rl = self.__rel_or_attr_align_prob(obj_r_rel, obj_l_rel)
                 if prob_lr >= self.refine_threshold or prob_rl >= self.refine_threshold:
-                    print(obj_l_rel.name + "\t" + obj_r_rel.name + "\t" + str(prob_lr) + "\t" + str(prob_rl))
+                    # print(obj_l_rel.name + "\t" + obj_r_rel.name + "\t" + str(prob_lr) + "\t" + str(prob_rl))
                     self.refined_tuple_candidate_dict[(obj_l_rel, obj_r_rel)] = prob_lr
                     self.refined_tuple_candidate_dict[(obj_r_rel, obj_l_rel)] = prob_rl
                     if self.rel_attr_align_candidate_dict.__contains__(obj_l_rel) is False:
@@ -180,7 +181,7 @@ class KGs:
                 prob_lr = self.__rel_or_attr_align_prob(obj_l_attr, obj_r_attr)
                 prob_rl = self.__rel_or_attr_align_prob(obj_r_attr, obj_l_attr)
                 if prob_lr >= self.refine_threshold or prob_rl >= self.refine_threshold:
-                    print(obj_l_attr.name + "\t" + obj_r_attr.name + "\t" + str(prob_lr) + "\t" + str(prob_rl))
+                    # print(obj_l_attr.name + "\t" + obj_r_attr.name + "\t" + str(prob_lr) + "\t" + str(prob_rl))
                     self.refined_tuple_candidate_dict[(obj_l_attr, obj_r_attr)] = prob_lr
                     self.refined_tuple_candidate_dict[(obj_r_attr, obj_l_attr)] = prob_rl
                     if self.rel_attr_align_candidate_dict.__contains__(obj_l_attr) is False:
@@ -333,6 +334,10 @@ class KGs:
                 self.__run_per_iteration(init=True)
             else:
                 self.__run_per_iteration()
+            # path_validation = "dataset/industry/ent_links"
+            # for i in range(9):
+            #     validate_threshold = 0.1 * float(i)
+            #     self.validate(path_validation, validate_threshold)
         print("PARIS Completed!")
 
     @staticmethod
@@ -401,7 +406,7 @@ class KGs:
                     self.insert_attr_tuple(obj_l, obj_r, prob, inv)
 
     def insert_ent_tuple(self, ent_l: str, ent_r: str, prob=1.0):
-        obj_l, obj_r = self.kg_l.entity_dict_by_value.get(ent_l.strip()), self.kg_r.entity_dict_by_value.get(ent_r.strip())
+        obj_l, obj_r = self.kg_l.entity_dict_by_name.get(ent_l.strip()), self.kg_r.entity_dict_by_name.get(ent_r.strip())
         if obj_l is None:
             print("Exception: fail to load Entity (" + ent_l + ")")
         if obj_r is None:
@@ -412,7 +417,7 @@ class KGs:
         self.__insert_ent_or_lite_tuple(obj_l, obj_r, prob)
 
     def insert_lite_tuple(self, lite_l: str, lite_r: str, prob=1.0):
-        obj_l, obj_r = self.kg_l.literal_dict_by_value.get(lite_l.strip()), self.kg_r.literal_dict_by_value.get(
+        obj_l, obj_r = self.kg_l.literal_dict_by_name.get(lite_l.strip()), self.kg_r.literal_dict_by_name.get(
             lite_r.strip())
         if obj_l is None:
             print("Exception: fail to load Literal (" + lite_l + ")")
@@ -426,7 +431,7 @@ class KGs:
     def insert_rel_tuple(self, rel_l: str, rel_r: str, prob=1.0, inv=False):
         if inv:
             rel_l, rel_r = rel_r, rel_l
-        obj_l, obj_r = self.kg_l.relation_dict_by_value.get(rel_l.strip()), self.kg_r.relation_dict_by_value.get(
+        obj_l, obj_r = self.kg_l.relation_dict_by_name.get(rel_l.strip()), self.kg_r.relation_dict_by_name.get(
             rel_r.strip())
         if obj_l is None:
             print("Exception: fail to load Relation (" + rel_l + ")")
@@ -443,7 +448,7 @@ class KGs:
     def insert_attr_tuple(self, attr_l: str, attr_r: str, prob=1.0, inv=False):
         if inv:
             attr_l, attr_r = attr_r, attr_l
-        obj_l, obj_r = self.kg_l.attribute_dict_by_value.get(attr_l.strip()), self.kg_r.attribute_dict_by_value.get(
+        obj_l, obj_r = self.kg_l.attribute_dict_by_name.get(attr_l.strip()), self.kg_r.attribute_dict_by_name.get(
             attr_r.strip())
         if obj_l is None:
             print("Exception: fail to load Attribute (" + attr_l + ")")
@@ -491,7 +496,11 @@ class KGs:
             self.__result_writer(f, lite_result_dict, "Literal Alignment")
             self.__result_writer(f, ent_result_dict, "Entity Alignment")
 
-    def validate(self, path):
+    def validate(self, path, threshold=None):
+        if threshold is None:
+            threshold = self.output_threshold
+        else:
+            threshold = float(threshold)
         correct_num, total_num = 0.0, 0.0
         ent_align_result = set()
         for (obj_l, obj_r_dict) in self.ent_lite_align_refined_dict.items():
@@ -505,7 +514,7 @@ class KGs:
                 if prob > prob_max:
                     counterpart = candidate
             if counterpart is not None:
-                if prob_max < self.output_threshold:
+                if prob_max < threshold:
                     continue
                 ent_align_result.add((obj_l, counterpart))
         if len(ent_align_result) == 0:
@@ -515,10 +524,10 @@ class KGs:
             for line in f.readlines():
                 params = str.strip(line).split("\t")
                 assert len(params) == 2
-                obj_l, ent_r = params[0].strip(), params[1].strip()
-                obj_l, obj_r = self.kg_l.entity_dict_by_value.get(obj_l), self.kg_r.entity_dict_by_value.get(ent_r)
+                ent_l, ent_r = params[0].strip(), params[1].strip()
+                obj_l, obj_r = self.kg_l.entity_dict_by_name.get(ent_l), self.kg_r.entity_dict_by_name.get(ent_r)
                 if obj_l is None:
-                    print("Exception: fail to load Entity (" + obj_l + ")")
+                    print("Exception: fail to load Entity (" + ent_l + ")")
                 if obj_r is None:
                     print("Exception: fail to load Entity (" + ent_r + ")")
                 if obj_l is None or obj_r is None:
@@ -532,3 +541,24 @@ class KGs:
         else:
             precision, recall = correct_num / len(ent_align_result), correct_num / total_num
             print("Precision: " + str(precision) + "\tRecall: " + str(recall))
+
+    # def ent_matcher(self, threshold=None):
+    #     if threshold is None:
+    #         threshold = self.output_threshold
+    #     visited, ent_align_result = set(), set()
+    #     sorted(self.refined_tuple_dict.items(), key=lambda x: x[1], reverse=True)
+    #     for (obj_tuple, prob) in self.refined_tuple_dict.items():
+    #         obj_l, obj_r = obj_tuple[0], obj_tuple[1]
+    #         if obj_l.get_type() != "ENTITY":
+    #             continue
+    #         if obj_l in visited or obj_r in visited:
+    #             continue
+    #         if prob < threshold:
+    #             break
+    #         if obj_l.affiliation is self.kg_l:
+    #             ent_align_result.add((obj_l, obj_r))
+    #         else:
+    #             ent_align_result.add((obj_r, obj_l))
+    #         visited.add(obj_l)
+    #         visited.add(obj_r)
+    #     return ent_align_result

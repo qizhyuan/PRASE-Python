@@ -19,6 +19,11 @@ class KG:
         self.attribute_set = set()
         self.literal_set = set()
 
+        self.entity_dict_by_name = dict()
+        self.relation_dict_by_name = dict()
+        self.attribute_dict_by_name = dict()
+        self.literal_dict_by_name = dict()
+
         self.entity_dict_by_value = dict()
         self.relation_dict_by_value = dict()
         self.attribute_dict_by_value = dict()
@@ -31,8 +36,6 @@ class KG:
         self.relation_set_func_inv_ranked = list()
         self.attribute_set_func_ranked = list()
         self.attribute_set_func_inv_ranked = list()
-
-        self.literal_dict_by_len = dict()
 
         self.__init()
 
@@ -81,7 +84,8 @@ class KG:
         else:
             entity = Entity(idx=len(self.entity_set), name=name, preprocess_func=self.ent_pre_func, affiliation=self)
             self.entity_set.add(entity)
-            self.entity_dict_by_value[name] = entity
+            self.entity_dict_by_name[entity.name] = entity
+            self.entity_dict_by_value[entity.value] = entity
             return entity
 
     def get_relation(self, name: str):
@@ -90,7 +94,8 @@ class KG:
         else:
             relation = Relation(idx=len(self.relation_set), name=name, preprocess_func=self.rel_pre_func, affiliation=self)
             self.relation_set.add(relation)
-            self.relation_dict_by_value[name] = relation
+            self.relation_dict_by_name[relation.name] = relation
+            self.relation_dict_by_value[relation.value] = relation
             return relation
 
     def get_attribute(self, name: str):
@@ -99,7 +104,8 @@ class KG:
         else:
             attribute = Attribute(idx=len(self.attribute_set), name=name, preprocess_func=self.attr_pre_func, affiliation=self)
             self.attribute_set.add(attribute)
-            self.attribute_dict_by_value[name] = attribute
+            self.attribute_dict_by_name[attribute.name] = attribute
+            self.attribute_dict_by_value[attribute.value] = attribute
             return attribute
 
     def get_literal(self, name: str):
@@ -108,11 +114,8 @@ class KG:
         else:
             literal = Literal(name=name, preprocess_func=self.lite_pre_func, affiliation=self)
             self.literal_set.add(literal)
-            self.literal_dict_by_value[name] = literal
-            value = literal.value
-            if self.literal_dict_by_len.__contains__(len(value)) is False:
-                self.literal_dict_by_len[value] = set()
-            self.literal_dict_by_len[value].add(literal)
+            self.literal_dict_by_name[literal.name] = literal
+            self.literal_dict_by_value[literal.value] = literal
             return literal
 
     def insert_relation_tuple(self, head: str, relation: str, tail: str):
