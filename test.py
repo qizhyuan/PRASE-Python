@@ -3,7 +3,7 @@ from objects.KGs import KGs
 import re
 
 
-def construct_kg(path_r, path_a=None, sep="\t", name=None):
+def construct_kg(path_r, path_a=None, sep='\t', name=None):
     kg = KG(name=name)
     if path_a is not None:
         with open(path_r, "r", encoding="utf-8") as f:
@@ -37,23 +37,23 @@ def construct_kg(path_r, path_a=None, sep="\t", name=None):
     return kg
 
 
-path_r_1 = "dataset/person/person11.nt"
+# path_r_1 = "dataset/person/person11.nt"
 
-path_r_2 = "dataset/person/person12.nt"
+# path_r_2 = "dataset/person/person12.nt"
 
-# path_r_1 = "dataset/industry/rel_triples_1"
-# path_a_1 = "dataset/industry/attr_triples_1"
+path_r_1 = "dataset/EN_FR_15K_V1/rel_triples_1"
+path_a_1 = "dataset/EN_FR_15K_V1/attr_triples_1"
 #
-# path_r_2 = "dataset/industry/rel_triples_2"
-# path_a_2 = "dataset/industry/attr_triples_2"
+path_r_2 = "dataset/EN_FR_15K_V1/rel_triples_2"
+path_a_2 = "dataset/EN_FR_15K_V1/attr_triples_2"
 #
-# path_validation = "dataset/industry/ent_links"
+path_validation = "dataset/EN_FR_15K_V1/ent_links"
 
-# kg1 = construct_kg(path_r_1, path_a_1, "KG1")
-# kg2 = construct_kg(path_r_2, path_a_2, "KG2")\
+kg1 = construct_kg(path_r_1, path_a_1, name="KG1")
+kg2 = construct_kg(path_r_2, path_a_2, name="KG2")
 
-kg1 = construct_kg(path_r=path_r_1, name="KG1", sep=' ')
-kg2 = construct_kg(path_r=path_r_2, name="KG2", sep=' ')
+# kg1 = construct_kg(path_r=path_r_1, name="KG1", sep=' ')
+# kg2 = construct_kg(path_r=path_r_2, name="KG2", sep=' ')
 
 # for lite in kg1.literal_set:
 #     print(lite.name + "\t" + lite.value)
@@ -82,7 +82,7 @@ kgs.store_results()
 # kgs.load_params()
 # kgs.run()
 
-# kgs.validate(path_validation, validate_threshold=0.0)
+kgs.validate(path_validation, threshold=0.2)
 # kgs.store_params()
 
 # for i in range(9):
