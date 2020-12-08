@@ -535,7 +535,7 @@ class KGs:
                     continue
                 ent_align_result.add((obj_l, counterpart))
         if len(ent_align_result) == 0:
-            print("Exception: no satisfied alignment result with threshold=" + str(self.output_threshold))
+            print("Exception: no satisfied alignment result with threshold=" + str(threshold))
             return
         with open(path, "r", encoding="utf8") as f:
             for line in f.readlines():

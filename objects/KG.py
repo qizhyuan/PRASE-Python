@@ -79,8 +79,8 @@ class KG:
             self.lite_pre_func = default_pre_func_for_literal
 
     def get_entity(self, name: str):
-        if self.entity_dict_by_value.__contains__(name):
-            return self.entity_dict_by_value.get(name)
+        if self.entity_dict_by_name.__contains__(name):
+            return self.entity_dict_by_name.get(name)
         else:
             entity = Entity(idx=len(self.entity_set), name=name, preprocess_func=self.ent_pre_func, affiliation=self)
             self.entity_set.add(entity)
@@ -89,8 +89,8 @@ class KG:
             return entity
 
     def get_relation(self, name: str):
-        if self.relation_dict_by_value.__contains__(name):
-            return self.relation_dict_by_value.get(name)
+        if self.relation_dict_by_name.__contains__(name):
+            return self.relation_dict_by_name.get(name)
         else:
             relation = Relation(idx=len(self.relation_set), name=name, preprocess_func=self.rel_pre_func, affiliation=self)
             self.relation_set.add(relation)
@@ -99,8 +99,8 @@ class KG:
             return relation
 
     def get_attribute(self, name: str):
-        if self.attribute_dict_by_value.__contains__(name):
-            return self.attribute_dict_by_value.get(name)
+        if self.attribute_dict_by_name.__contains__(name):
+            return self.attribute_dict_by_name.get(name)
         else:
             attribute = Attribute(idx=len(self.attribute_set), name=name, preprocess_func=self.attr_pre_func, affiliation=self)
             self.attribute_set.add(attribute)
@@ -109,8 +109,8 @@ class KG:
             return attribute
 
     def get_literal(self, name: str):
-        if self.literal_dict_by_value.__contains__(name):
-            return self.literal_dict_by_value.get(name)
+        if self.literal_dict_by_name.__contains__(name):
+            return self.literal_dict_by_name.get(name)
         else:
             literal = Literal(name=name, preprocess_func=self.lite_pre_func, affiliation=self)
             self.literal_set.add(literal)
