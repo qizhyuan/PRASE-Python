@@ -41,13 +41,13 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
 
 # path_r_2 = "dataset/person/person12.nt"
 
-path_r_1 = "dataset/EN_FR_15K_V1/rel_triples_1"
-path_a_1 = "dataset/EN_FR_15K_V1/attr_triples_1"
+path_r_1 = "dataset/industry/rel_triples_1"
+path_a_1 = "dataset/industry/attr_triples_1"
 #
-path_r_2 = "dataset/EN_FR_15K_V1/rel_triples_2"
-path_a_2 = "dataset/EN_FR_15K_V1/attr_triples_2"
+path_r_2 = "dataset/industry/rel_triples_2"
+path_a_2 = "dataset/industry/attr_triples_2"
 #
-path_validation = "dataset/EN_FR_15K_V1/ent_links"
+path_validation = "dataset/industry/ent_links"
 
 kg1 = construct_kg(path_r_1, path_a_1, name="KG1")
 kg2 = construct_kg(path_r_2, path_a_2, name="KG2")
@@ -62,7 +62,7 @@ kg2 = construct_kg(path_r_2, path_a_2, name="KG2")
 #     print(lite.name + "\t" + lite.value)
 
 #
-kgs = KGs(kg1=kg1, kg2=kg2, iteration=3, ent_lite_candidate_num=1, rel_attr_candidate_num=1, output_threshold=0.8, refine_threshold=0.01, theta=0.01)
+kgs = KGs(kg1=kg1, kg2=kg2, iteration=3, ent_lite_candidate_num=3, rel_attr_candidate_num=3, output_threshold=0.8, refine_threshold=0.1, theta=0.2)
 
 kgs.run()
 kgs.store_results()

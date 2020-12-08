@@ -37,6 +37,10 @@ class KG:
         self.attribute_set_func_ranked = list()
         self.attribute_set_func_inv_ranked = list()
 
+        self.rel_or_attr_dict_by_tuple = dict()
+        self.ent_or_lite_head_dict_by_tuple = dict()
+        self.ent_or_lite_tail_dict_by_tuple = dict()
+
         self.__init()
 
     def __init(self):
@@ -77,6 +81,12 @@ class KG:
             self.attr_pre_func = default_pre_func
         if self.lite_pre_func is None:
             self.lite_pre_func = default_pre_func_for_literal
+
+    @staticmethod
+    def __dict_set_insert_helper(dictionary: dict, key, value):
+        if dictionary.__contains__(key) is False:
+            dictionary[key] = set()
+        dictionary[key].add(value)
 
     def get_entity(self, name: str):
         if self.entity_dict_by_name.__contains__(name):
@@ -124,6 +134,9 @@ class KG:
         rel.add_relation_tuple(head=ent_h, tail=ent_t)
         ent_t.add_relation_as_tail(relation=rel, head=ent_h)
         self.relation_tuple_list.append((ent_h, rel, ent_t))
+        self.__dict_set_insert_helper(self.rel_or_attr_dict_by_tuple, (ent_h, ent_t), rel)
+        self.__dict_set_insert_helper(self.ent_or_lite_head_dict_by_tuple, (ent_t, rel), ent_h)
+        self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (ent_h, rel), ent_t)
 
     def insert_attribute_tuple(self, entity: str, attribute: str, literal: str):
         ent, attr, val = self.get_entity(entity), self.get_attribute(attribute), self.get_literal(literal)
@@ -131,6 +144,18 @@ class KG:
         attr.add_attribute_tuple(entity=ent, literal=val)
         val.add_attribute_tuple(entity=ent, attribute=attr)
         self.attribute_tuple_list.append((ent, attr, val))
+        self.__dict_set_insert_helper(self.rel_or_attr_dict_by_tuple, (ent, val), attr)
+        self.__dict_set_insert_helper(self.ent_or_lite_head_dict_by_tuple, (val, attr), ent)
+        self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (ent, attr), val)
+
+    def get_rel_or_attr_set_by_tuple(self, tup: tuple):
+        return self.rel_or_attr_dict_by_tuple.get(tup, set())
+
+    def get_ent_or_lite_head_set_by_tuple(self, tup: tuple):
+        return self.ent_or_lite_head_dict_by_tuple.get(tup, set())
+
+    def get_ent_or_lite_tail_set_by_tuple(self, tup: tuple):
+        return self.ent_or_lite_tail_dict_by_tuple.get(tup, set())
 
     def calculate_functionality(self):
         for relation in self.relation_set:

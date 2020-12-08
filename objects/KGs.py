@@ -16,6 +16,7 @@ class KGs:
 
         self.ent_lite_align_candidate_dict = dict()
         self.rel_attr_align_candidate_dict = dict()
+        self.rel_attr_align_norm_dict = dict()
 
         self.ent_lite_align_refined_dict = dict()
         self.rel_attr_align_refined_dict = dict()
@@ -118,79 +119,147 @@ class KGs:
         self.refined_tuple_dict = refined_tuple_dict
 
     def __ent_lite_align_per_iteration(self, init=False):
-        visited = set()
-        for (obj_l, obj_r_dict) in self.ent_lite_align_refined_dict.items():
-            if obj_l.affiliation is self.kg_r:
-                continue
-            for (obj_r, _) in obj_r_dict.items():
-                for obj_l_neighbor in obj_l.neighbored_as_tail | obj_l.neighbored_as_head:
-                    for obj_r_neighbor in obj_r.neighbored_as_tail | obj_r.neighbored_as_head:
-                        if obj_l_neighbor.get_type() != obj_r_neighbor.get_type():
+        for ent_h in self.kg_l.entity_set:
+            counterpart_dict = dict()
+            for (rel_or_attr, tail_set) in ent_h.involved_as_tail_dict.items():
+                if init is False and self.__exist_counterpart(rel_or_attr) is False:
+                    continue
+                if init:
+                    for ent_t in tail_set:
+                        if self.__exist_counterpart(ent_t) is False:
                             continue
-                        if (obj_l_neighbor, obj_r_neighbor) in visited:
-                            continue
-                        p_lr = self.__ent_or_lite_align_prob(obj_l_neighbor, obj_r_neighbor, init)
-                        if p_lr >= self.refine_threshold:
-                            if self.ent_lite_align_candidate_dict.__contains__(obj_l_neighbor) is False:
-                                self.ent_lite_align_candidate_dict[obj_l_neighbor] = dict()
-                            if self.ent_lite_align_candidate_dict.__contains__(obj_r_neighbor) is False:
-                                self.ent_lite_align_candidate_dict[obj_r_neighbor] = dict()
-                            self.ent_lite_align_candidate_dict[obj_l_neighbor][obj_r_neighbor] = p_lr
-                            self.ent_lite_align_candidate_dict[obj_r_neighbor][obj_l_neighbor] = p_lr
-                            self.refined_tuple_candidate_dict[(obj_l_neighbor, obj_r_neighbor)] = p_lr
-                            self.refined_tuple_candidate_dict[(obj_r_neighbor, obj_l_neighbor)] = p_lr
-                        visited.add((obj_l_neighbor, obj_r_neighbor))
-                        visited.add((obj_r_neighbor, obj_l_neighbor))
-                prob = self.__ent_or_lite_align_prob(obj_l, obj_r, init)
-                if prob >= self.refine_threshold:
-                    if self.ent_lite_align_candidate_dict.__contains__(obj_l) is False:
-                        self.ent_lite_align_candidate_dict[obj_l] = dict()
-                    if self.ent_lite_align_candidate_dict.__contains__(obj_r) is False:
-                        self.ent_lite_align_candidate_dict[obj_r] = dict()
-                    self.ent_lite_align_candidate_dict[obj_l][obj_r] = prob
-                    self.ent_lite_align_candidate_dict[obj_r][obj_l] = prob
-                    self.refined_tuple_candidate_dict[(obj_l, obj_r)] = prob
-                    self.refined_tuple_candidate_dict[(obj_r, obj_l)] = prob
-                visited.add((obj_l, obj_r))
-                visited.add((obj_r, obj_l))
+                        for (ent_t_counterpart, prob) in self.ent_lite_align_refined_dict[ent_t].items():
+                            for (rel_or_attr_counterpart, ent_h_counterpart_set) in self
+
+
+
+
+
+
+        # visited = set()
+        # for (obj_l, obj_r_dict) in self.ent_lite_align_refined_dict.items():
+        #     if obj_l.affiliation is self.kg_r:
+        #         continue
+        #     for (obj_r, _) in obj_r_dict.items():
+        #         for obj_l_neighbor in obj_l.neighbored_as_tail | obj_l.neighbored_as_head:
+        #             for obj_r_neighbor in obj_r.neighbored_as_tail | obj_r.neighbored_as_head:
+        #                 if obj_l_neighbor.get_type() != obj_r_neighbor.get_type():
+        #                     continue
+        #                 if (obj_l_neighbor, obj_r_neighbor) in visited:
+        #                     continue
+        #                 p_lr = self.__ent_or_lite_align_prob(obj_l_neighbor, obj_r_neighbor, init)
+        #                 if p_lr >= self.refine_threshold:
+        #                     if self.ent_lite_align_candidate_dict.__contains__(obj_l_neighbor) is False:
+        #                         self.ent_lite_align_candidate_dict[obj_l_neighbor] = dict()
+        #                     if self.ent_lite_align_candidate_dict.__contains__(obj_r_neighbor) is False:
+        #                         self.ent_lite_align_candidate_dict[obj_r_neighbor] = dict()
+        #                     self.ent_lite_align_candidate_dict[obj_l_neighbor][obj_r_neighbor] = p_lr
+        #                     self.ent_lite_align_candidate_dict[obj_r_neighbor][obj_l_neighbor] = p_lr
+        #                     self.refined_tuple_candidate_dict[(obj_l_neighbor, obj_r_neighbor)] = p_lr
+        #                     self.refined_tuple_candidate_dict[(obj_r_neighbor, obj_l_neighbor)] = p_lr
+        #                 visited.add((obj_l_neighbor, obj_r_neighbor))
+        #                 visited.add((obj_r_neighbor, obj_l_neighbor))
+        #         prob = self.__ent_or_lite_align_prob(obj_l, obj_r, init)
+        #         if prob >= self.refine_threshold:
+        #             if self.ent_lite_align_candidate_dict.__contains__(obj_l) is False:
+        #                 self.ent_lite_align_candidate_dict[obj_l] = dict()
+        #             if self.ent_lite_align_candidate_dict.__contains__(obj_r) is False:
+        #                 self.ent_lite_align_candidate_dict[obj_r] = dict()
+        #             self.ent_lite_align_candidate_dict[obj_l][obj_r] = prob
+        #             self.ent_lite_align_candidate_dict[obj_r][obj_l] = prob
+        #             self.refined_tuple_candidate_dict[(obj_l, obj_r)] = prob
+        #             self.refined_tuple_candidate_dict[(obj_r, obj_l)] = prob
+        #         visited.add((obj_l, obj_r))
+        #         visited.add((obj_r, obj_l))
 
     def __rel_attr_align_per_iteration(self):
-        visited = set()
-        for obj_l_rel in self.kg_l.relation_set:
-            for obj_r_rel in self.kg_r.relation_set:
-                if (obj_l_rel, obj_r_rel) in visited:
-                    continue
-                prob_lr = self.__rel_or_attr_align_prob(obj_l_rel, obj_r_rel)
-                prob_rl = self.__rel_or_attr_align_prob(obj_r_rel, obj_l_rel)
-                if prob_lr >= self.refine_threshold or prob_rl >= self.refine_threshold:
-                    # print(obj_l_rel.name + "\t" + obj_r_rel.name + "\t" + str(prob_lr) + "\t" + str(prob_rl))
-                    self.refined_tuple_candidate_dict[(obj_l_rel, obj_r_rel)] = prob_lr
-                    self.refined_tuple_candidate_dict[(obj_r_rel, obj_l_rel)] = prob_rl
-                    if self.rel_attr_align_candidate_dict.__contains__(obj_l_rel) is False:
-                        self.rel_attr_align_candidate_dict[obj_l_rel] = dict()
-                    if self.rel_attr_align_candidate_dict.__contains__(obj_r_rel) is False:
-                        self.rel_attr_align_candidate_dict[obj_r_rel] = dict()
-                    self.rel_attr_align_candidate_dict[obj_l_rel][obj_r_rel] = prob_lr
-                    self.rel_attr_align_candidate_dict[obj_r_rel][obj_l_rel] = prob_rl
-                visited.add((obj_l_rel, obj_r_rel))
+        self.__rel_attr_align_per_iteration_helper(self.kg_l.relation_set, self.kg_r)
+        self.__rel_attr_align_per_iteration_helper(self.kg_r.relation_set, self.kg_l)
+        self.__rel_attr_align_per_iteration_helper(self.kg_l.attribute_set, self.kg_r)
+        self.__rel_attr_align_per_iteration_helper(self.kg_r.attribute_set, self.kg_l)
+        self.__rel_attr_align_prob_norm()
 
-        for obj_l_attr in self.kg_l.attribute_set:
-            for obj_r_attr in self.kg_r.attribute_set:
-                if (obj_l_attr, obj_r_attr) in visited:
+        # visited = set()
+        # for obj_l_rel in self.kg_l.relation_set:
+        #     for obj_r_rel in self.kg_r.relation_set:
+        #         if (obj_l_rel, obj_r_rel) in visited:
+        #             continue
+        #         prob_lr = self.__rel_or_attr_align_prob(obj_l_rel, obj_r_rel)
+        #         prob_rl = self.__rel_or_attr_align_prob(obj_r_rel, obj_l_rel)
+        #         if prob_lr >= self.refine_threshold or prob_rl >= self.refine_threshold:
+        #             # print(obj_l_rel.name + "\t" + obj_r_rel.name + "\t" + str(prob_lr) + "\t" + str(prob_rl))
+        #             self.refined_tuple_candidate_dict[(obj_l_rel, obj_r_rel)] = prob_lr
+        #             self.refined_tuple_candidate_dict[(obj_r_rel, obj_l_rel)] = prob_rl
+        #             if self.rel_attr_align_candidate_dict.__contains__(obj_l_rel) is False:
+        #                 self.rel_attr_align_candidate_dict[obj_l_rel] = dict()
+        #             if self.rel_attr_align_candidate_dict.__contains__(obj_r_rel) is False:
+        #                 self.rel_attr_align_candidate_dict[obj_r_rel] = dict()
+        #             self.rel_attr_align_candidate_dict[obj_l_rel][obj_r_rel] = prob_lr
+        #             self.rel_attr_align_candidate_dict[obj_r_rel][obj_l_rel] = prob_rl
+        #         visited.add((obj_l_rel, obj_r_rel))
+        #
+        # for obj_l_attr in self.kg_l.attribute_set:
+        #     for obj_r_attr in self.kg_r.attribute_set:
+        #         if (obj_l_attr, obj_r_attr) in visited:
+        #             continue
+        #         prob_lr = self.__rel_or_attr_align_prob(obj_l_attr, obj_r_attr)
+        #         prob_rl = self.__rel_or_attr_align_prob(obj_r_attr, obj_l_attr)
+        #         if prob_lr >= self.refine_threshold or prob_rl >= self.refine_threshold:
+        #             # print(obj_l_attr.name + "\t" + obj_r_attr.name + "\t" + str(prob_lr) + "\t" + str(prob_rl))
+        #             self.refined_tuple_candidate_dict[(obj_l_attr, obj_r_attr)] = prob_lr
+        #             self.refined_tuple_candidate_dict[(obj_r_attr, obj_l_attr)] = prob_rl
+        #             if self.rel_attr_align_candidate_dict.__contains__(obj_l_attr) is False:
+        #                 self.rel_attr_align_candidate_dict[obj_l_attr] = dict()
+        #             if self.rel_attr_align_candidate_dict.__contains__(obj_r_attr) is False:
+        #                 self.rel_attr_align_candidate_dict[obj_r_attr] = dict()
+        #             self.rel_attr_align_candidate_dict[obj_l_attr][obj_r_attr] = prob_lr
+        #             self.rel_attr_align_candidate_dict[obj_r_attr][obj_l_attr] = prob_rl
+        #         visited.add((obj_l_attr, obj_r_attr))
+
+    def __rel_attr_align_per_iteration_helper(self, source_obj_set, target_kg):
+        for obj in source_obj_set:
+            for (head, tail) in obj.tuple_set:
+                if self.__exist_counterpart(head) is False or self.__exist_counterpart(tail) is False:
                     continue
-                prob_lr = self.__rel_or_attr_align_prob(obj_l_attr, obj_r_attr)
-                prob_rl = self.__rel_or_attr_align_prob(obj_r_attr, obj_l_attr)
-                if prob_lr >= self.refine_threshold or prob_rl >= self.refine_threshold:
-                    # print(obj_l_attr.name + "\t" + obj_r_attr.name + "\t" + str(prob_lr) + "\t" + str(prob_rl))
-                    self.refined_tuple_candidate_dict[(obj_l_attr, obj_r_attr)] = prob_lr
-                    self.refined_tuple_candidate_dict[(obj_r_attr, obj_l_attr)] = prob_rl
-                    if self.rel_attr_align_candidate_dict.__contains__(obj_l_attr) is False:
-                        self.rel_attr_align_candidate_dict[obj_l_attr] = dict()
-                    if self.rel_attr_align_candidate_dict.__contains__(obj_r_attr) is False:
-                        self.rel_attr_align_candidate_dict[obj_r_attr] = dict()
-                    self.rel_attr_align_candidate_dict[obj_l_attr][obj_r_attr] = prob_lr
-                    self.rel_attr_align_candidate_dict[obj_r_attr][obj_l_attr] = prob_rl
-                visited.add((obj_l_attr, obj_r_attr))
+                rel_attr_align_prob_dict, norm = dict(), 1.0
+                for head_counterpart in self.ent_lite_align_refined_dict[head]:
+                    for tail_counterpart in self.ent_lite_align_refined_dict[tail]:
+                        obj_counterpart_set = target_kg.get_rel_or_attr_set_by_tuple((head_counterpart, tail_counterpart))
+                        prob_x, prob_y = self.__get_align_prob(head, head_counterpart), self.__get_align_prob(tail, tail_counterpart)
+                        val = prob_x * prob_y
+                        for obj_counterpart in obj_counterpart_set:
+                            if rel_attr_align_prob_dict.__contains__(obj_counterpart) is False:
+                                rel_attr_align_prob_dict[obj_counterpart] = 1.0
+                            rel_attr_align_prob_dict[obj_counterpart] *= 1.0 - val
+                        norm *= 1.0 - val
+                if self.rel_attr_align_norm_dict.__contains__(obj) is False:
+                    self.rel_attr_align_norm_dict[obj] = 0.0
+                self.rel_attr_align_norm_dict[obj] += 1.0 - norm
+                if len(rel_attr_align_prob_dict) == 0:
+                    continue
+                if self.rel_attr_align_candidate_dict.__contains__(obj) is False:
+                    self.rel_attr_align_candidate_dict[obj] = dict()
+                for (rel_or_attr, value) in rel_attr_align_prob_dict.items():
+                    if self.rel_attr_align_candidate_dict[obj].__contains__(rel_or_attr) is False:
+                        self.rel_attr_align_candidate_dict[obj][rel_or_attr] = 0.0
+                    self.rel_attr_align_candidate_dict[obj][rel_or_attr] += 1.0 - value
+
+    def __rel_attr_align_prob_norm(self):
+        for (obj, counterpart_dict) in self.rel_attr_align_candidate_dict.items():
+            norm = self.rel_attr_align_norm_dict.get(obj, 1.0)
+            for (counterpart, prob) in self.rel_attr_align_candidate_dict[obj].items():
+                norm_prob = prob / norm
+                self.rel_attr_align_candidate_dict[obj][counterpart] = norm_prob
+                self.refined_tuple_candidate_dict[(obj, counterpart)] = norm_prob
+
+    def __exist_counterpart(self, obj):
+        if obj.get_type() == "ENTITY" or obj.get_type() == "LITERAL":
+            if self.ent_lite_align_refined_dict.__contains__(obj):
+                return len(self.ent_lite_align_refined_dict[obj]) > 0
+        else:
+            if self.rel_attr_align_refined_dict.__contains__(obj):
+                return len(self.rel_attr_align_refined_dict[obj]) > 0
+        return False
 
     def __refine_rel_attr_candidate(self):
         rel_attr_align_dict, refined_tuple_dict = dict(), dict()
@@ -219,13 +288,15 @@ class KGs:
         self.rel_attr_align_candidate_dict = dict()
         self.refined_tuple_candidate_dict = dict()
         self._rel_or_attr_align_prob_denominator = dict()
+        self.rel_attr_align_norm_dict = dict()
 
     def __ent_or_lite_align_prob(self, obj_l, obj_r, init=False):
         prob = 1.0
         if obj_l.get_type() != obj_r.get_type():
             return 0.0
         if obj_l.get_type() == "LITERAL":
-            return self.similarity_func(obj_l.value, obj_r.value)
+            return 1.0 if obj_l.value == obj_r.value else 0.0
+            # return self.similarity_func(obj_l.value, obj_r.value)
         for (rel_l, tail_set_l) in obj_l.involved_as_head_dict.items():
             for (rel_r, tail_set_r) in obj_r.involved_as_head_dict.items():
                 if init is False and self.refined_tuple_dict.__contains__((rel_l, rel_r)) is False and \
