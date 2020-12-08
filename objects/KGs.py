@@ -123,8 +123,8 @@ class KGs:
             if obj_l.affiliation is self.kg_r:
                 continue
             for (obj_r, _) in obj_r_dict.items():
-                for obj_l_neighbor in obj_l.neighbored_as_tail:
-                    for obj_r_neighbor in obj_r.neighbored_as_tail:
+                for obj_l_neighbor in obj_l.neighbored_as_tail | obj_l.neighbored_as_head:
+                    for obj_r_neighbor in obj_r.neighbored_as_tail | obj_r.neighbored_as_head:
                         if obj_l_neighbor.get_type() != obj_r_neighbor.get_type():
                             continue
                         if (obj_l_neighbor, obj_r_neighbor) in visited:
@@ -242,6 +242,23 @@ class KGs:
                         p_rl = self.__get_align_prob(rel_r, rel_l) if init is False else self.theta
                         prob *= (1.0 - p_lr * rel_r.functionality_inv * equality) * (
                                 1.0 - p_rl * rel_l.functionality_inv * equality)
+
+        for (rel_l, head_set_l) in obj_l.involved_as_tail_dict.items():
+            for (rel_r, head_set_r) in obj_r.involved_as_tail_dict.items():
+                if init is False and self.refined_tuple_dict.__contains__((rel_l, rel_r)) is False and \
+                        self.refined_tuple_dict.__contains__((rel_r, rel_l)) is False:
+                    continue
+                for head_l in head_set_l:
+                    for head_r in head_set_r:
+                        if self.refined_tuple_dict.__contains__((head_l, head_r)) is False:
+                            continue
+                        equality = self.__get_align_prob(head_l, head_r)
+                        if equality <= 0.01:
+                            continue
+                        p_lr = self.__get_align_prob(rel_l, rel_r) if init is False else self.theta
+                        p_rl = self.__get_align_prob(rel_r, rel_l) if init is False else self.theta
+                        prob *= (1.0 - p_lr * rel_r.functionality * equality) * (
+                                1.0 - p_rl * rel_l.functionality * equality)
 
         return 1.0 - prob
 

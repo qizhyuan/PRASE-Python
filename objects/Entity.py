@@ -15,6 +15,7 @@ class Entity:
         self.involved_as_head_dict = dict()
 
         self.neighbored_as_tail = set()
+        self.neighbored_as_head = set()
 
         self.__init()
 
@@ -31,6 +32,7 @@ class Entity:
 
         self.involved_rel_dict[relation].add(tail)
         self.involved_as_head_dict[relation].add(tail)
+        self.neighbored_as_head.add(tail)
 
     def add_relation_as_tail(self, relation, head):
         if self.involved_as_tail_dict.__contains__(relation) is False:
@@ -47,4 +49,5 @@ class Entity:
             self.involved_attr_dict[attribute] = set()
 
         self.involved_as_head_dict[attribute].add(literal)
+        self.neighbored_as_head.add(literal)
 

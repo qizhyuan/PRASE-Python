@@ -10,6 +10,7 @@ class Literal:
         self.involved_as_head_dict = dict()
 
         self.neighbored_as_tail = set()
+        self.neighbored_as_head = set()
 
         self.__init()
 
