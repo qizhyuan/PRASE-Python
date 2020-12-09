@@ -1,4 +1,5 @@
 import os
+import random
 from objects.KG import KG
 
 
@@ -18,9 +19,13 @@ class KGs:
         self.lite_align_dict = dict()
         self.lite_align_tuple_dict = dict()
 
-        self.ent_align_candidate_dict = dict()
-        self.rel_attr_align_candidate_dict = dict()
+        # self.ent_align_candidate_dict = dict()
+        self.rel_attr_align_ongoing_dict = dict()
         self.rel_attr_align_norm_dict = dict()
+
+        self.rel_attr_align_candidate_dict = dict()
+
+        self.ent_align_ongoing_dict = dict()
 
         self.ent_lite_align_refined_dict = dict()
         self.rel_attr_align_refined_dict = dict()
@@ -35,6 +40,7 @@ class KGs:
         self._rel_or_attr_align_prob_denominator = dict()
 
         self.__init()
+        self._init = True
 
     def __init(self):
         def similarity_func(s1: str, s2: str):
@@ -106,7 +112,7 @@ class KGs:
         # self.ent_lite_align_set = set()
         ent_lite_align_dict, refined_tuple_dict = self.lite_align_dict.copy(), self.lite_align_tuple_dict.copy()
         ent_lite_align_dict_tmp = dict()
-        for (obj_l, obj_r_dict) in self.ent_align_candidate_dict.items():
+        for (obj_l, obj_r_dict) in self.ent_lite_align_refined_dict.items():
             if obj_l.affiliation is self.kg_r:
                 continue
             sorted(obj_r_dict.items(), key=lambda x: x[1], reverse=True)
@@ -135,7 +141,9 @@ class KGs:
         self.refined_tuple_dict = refined_tuple_dict.copy()
 
     def __ent_lite_align_per_iteration(self, init=False):
-        for ent in self.kg_l.entity_set:
+        kg_l_ent_list = list(self.kg_l.entity_set)
+        random.shuffle(kg_l_ent_list)
+        for ent in kg_l_ent_list:
             counterpart_dict = dict()
             for (rel_or_attr, head_set) in ent.involved_as_tail_dict.items():
                 if init is False and self.__exist_counterpart(rel_or_attr) is False:
@@ -219,14 +227,14 @@ class KGs:
                 #     print("EQV > 1!\t" + ent.name + "\t" + ent_counterpart.name)
                 if eqv_prob < self.refine_threshold:
                     continue
-                if self.ent_align_candidate_dict.__contains__(ent) is False:
-                    self.ent_align_candidate_dict[ent] = dict()
-                if self.ent_align_candidate_dict.__contains__(ent_counterpart) is False:
-                    self.ent_align_candidate_dict[ent_counterpart] = dict()
-                self.ent_align_candidate_dict[ent][ent_counterpart] = eqv_prob
-                self.ent_align_candidate_dict[ent_counterpart][ent] = eqv_prob
-                self.refined_tuple_candidate_dict[(ent, ent_counterpart)] = eqv_prob
-                self.refined_tuple_candidate_dict[(ent_counterpart, ent)] = eqv_prob
+                if self.ent_lite_align_refined_dict.__contains__(ent) is False:
+                    self.ent_lite_align_refined_dict[ent] = dict()
+                if self.ent_lite_align_refined_dict.__contains__(ent_counterpart) is False:
+                    self.ent_lite_align_refined_dict[ent_counterpart] = dict()
+                self.ent_lite_align_refined_dict[ent][ent_counterpart] = eqv_prob
+                self.ent_lite_align_refined_dict[ent_counterpart][ent] = eqv_prob
+                self.refined_tuple_dict[(ent, ent_counterpart)] = eqv_prob
+                self.refined_tuple_dict[(ent_counterpart, ent)] = eqv_prob
 
         # visited = set()
         # for (obj_l, obj_r_dict) in self.ent_lite_align_refined_dict.items():
@@ -263,6 +271,97 @@ class KGs:
         #             self.refined_tuple_candidate_dict[(obj_r, obj_l)] = prob
         #         visited.add((obj_l, obj_r))
         #         visited.add((obj_r, obj_l))
+
+    def __find_counterpart_of_ent(self, ent):
+        for (rel, ent_set) in ent.involved_as_tail_dict.items():
+            for head in ent_set:
+                for (head_counterpart, head_eqv_prob) in self.__get_counterpart_dict(head).items():
+                    if head_eqv_prob < self.theta:
+                        continue
+                    for (ent_counterpart, tail_eqv_prob) in self.__get_counterpart_dict(ent).items():
+                        self.__register_rel_align_prob_norm(rel, head_eqv_prob * tail_eqv_prob)
+                    for (rel_counterpart, head_counterpart_tail_set) in head_counterpart.involved_as_head_dict.items():
+                        for tail_counterpart in head_counterpart_tail_set:
+                            tail_eqv_prob = self.__get_align_prob(ent, tail_counterpart)
+                            self.__register_ongoing_rel_align_prob(rel, rel_counterpart, 1.0 - head_eqv_prob * tail_eqv_prob)
+
+                        self.__update_rel_align_prob(rel, rel_counterpart)
+        self.__update_ent_align_prob(ent)
+
+    def __register_ent_equality(self, rel, tail, rel_counterpart, tail_counterpart, head_eqv_prob):
+        prob_sub = self.__get_align_prob(rel, rel_counterpart)
+        prob_sup = self.__get_align_prob(rel_counterpart, rel)
+        if prob_sub < self.theta and prob_sup < self.theta:
+            if self._init:
+                prob_sub, prob_sup = self.theta, self.theta
+            else:
+                return
+        func_l, func_r = rel.functionality, rel_counterpart.functionality
+        factor = 1.0
+        factor_l = 1.0 - head_eqv_prob * prob_sup * func_r
+        factor_r = 1.0 - head_eqv_prob * prob_sub * func_l
+        if prob_sub >= 0.0 and func_l >= 0.0:
+            factor *= factor_l
+        if prob_sup >= 0.0 and func_r >= 0.0:
+            factor *= factor_r
+        if 1.0 - factor > self.epsilon:
+            self.__register_ongoing_ent_align_prob(tail, tail_counterpart)
+
+    def __register_ongoing_ent_align_prob(self, ent_l, ent_r, prob):
+        self.__register_ongoing_prob_product(self.ent_align_ongoing_dict, ent_l, ent_r, prob)
+        return
+
+    def __register_ongoing_rel_align_prob(self, rel_l, rel_r, prob):
+        self.__register_ongoing_prob_product(self.rel_attr_align_ongoing_dict, rel_l, rel_r, prob)
+        return
+
+    def __update_ent_align_prob(self, ent):
+        counterpart, value = None, 0.0
+        for (candidate, prob) in self.ent_align_ongoing_dict.get(ent, dict()):
+            val = 1.0 - prob
+            if val >= value:
+                value, counterpart = val, candidate
+        if value < self.theta or counterpart is None:
+            return
+        else:
+            self.__insert_ent_or_lite_tuple(ent, counterpart, value)
+
+    @staticmethod
+    def __register_ongoing_prob_product(dictionary, key1, key2, prob):
+        if not dictionary.__contains__(key1):
+            dictionary[key1] = dict()
+        if not dictionary[key1].__contains__(key2):
+            dictionary[key1][key2] = 1.0
+        dictionary[key1][key2] *= prob
+
+    def __register_rel_align_prob_norm(self, rel, prob):
+        if not self.rel_attr_align_norm_dict.__contains__(rel):
+            self.rel_attr_align_norm_dict[rel] = 0.0
+        self.rel_attr_align_norm_dict[rel] += prob
+
+    def __get_and_reset_ongoing_prob(self, rel_l, rel_r):
+        if not self.rel_attr_align_ongoing_dict.__contains__(rel_l):
+            return 1.0
+        if not self.rel_attr_align_ongoing_dict[rel_l].__contains__(rel_r):
+            return 1.0
+        prob = self.rel_attr_align_ongoing_dict[rel_l][rel_r]
+        self.rel_attr_align_ongoing_dict[rel_l][rel_r] = 1.0
+        return prob
+
+    def __update_rel_align_prob(self, rel_l, rel_r):
+        if not self.rel_attr_align_candidate_dict.__contains__(rel_l):
+            self.rel_attr_align_candidate_dict[rel_l] = dict()
+        if not self.rel_attr_align_candidate_dict[rel_l].__contains__(rel_r):
+            self.rel_attr_align_candidate_dict[rel_l][rel_r] = 0.0
+        self.rel_attr_align_candidate_dict[rel_l][rel_r] += 1.0 - self.__get_and_reset_ongoing_prob(rel_l, rel_r)
+
+
+
+    def __get_counterpart_dict(self, obj):
+        if obj.get_type() == "LITERAL" or obj.get_type() == "ENTITY":
+            return self.ent_lite_align_refined_dict.get(obj, dict())
+        else:
+            return self.rel_attr_align_refined_dict.get(obj, dict())
 
     def __rel_attr_align_per_iteration(self):
         self.__rel_attr_align_per_iteration_helper(self.kg_l.relation_set, self.kg_r)
@@ -396,7 +495,7 @@ class KGs:
         return
 
     def __clear_candidate_dict(self):
-        self.ent_align_candidate_dict.clear()
+        # self.ent_align_candidate_dict.clear()
         self.rel_attr_align_candidate_dict.clear()
         self.refined_tuple_candidate_dict.clear()
         self._rel_or_attr_align_prob_denominator.clear()
@@ -533,7 +632,7 @@ class KGs:
         print("Start...")
         for i in range(self.iteration):
             print(str(i + 1) + "-th iteration......")
-            if i == 0 and len(self.rel_attr_align_refined_dict) == 0:
+            if i <= 1:
                 self.__run_per_iteration(init=True)
             else:
                 self.__run_per_iteration()
@@ -673,6 +772,7 @@ class KGs:
         self.ent_lite_align_refined_dict[obj_l][obj_r] = prob
         self.ent_lite_align_refined_dict[obj_r][obj_l] = prob
         self.refined_tuple_dict[(obj_l, obj_r)] = prob
+        self.refined_tuple_dict[(obj_r, obj_l)] = prob
 
     def __insert_rel_attr_tuple(self, obj_l, obj_r, prob):
         if self.rel_attr_align_refined_dict.__contains__(obj_l) is False:

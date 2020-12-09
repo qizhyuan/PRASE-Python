@@ -129,6 +129,11 @@ class KG:
             return literal
 
     def insert_relation_tuple(self, head: str, relation: str, tail: str):
+        self.__insert_relation_tuple_one_way(head, relation, tail)
+        relation_inv = relation.strip() + str(" (INV)")
+        self.__insert_relation_tuple_one_way(tail, relation_inv, head)
+
+    def __insert_relation_tuple_one_way(self, head: str, relation: str, tail: str):
         ent_h, rel, ent_t = self.get_entity(head), self.get_relation(relation), self.get_entity(tail)
         ent_h.add_relation_as_head(relation=rel, tail=ent_t)
         rel.add_relation_tuple(head=ent_h, tail=ent_t)
@@ -139,6 +144,11 @@ class KG:
         self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (ent_h, rel), ent_t)
 
     def insert_attribute_tuple(self, entity: str, attribute: str, literal: str):
+        self.__insert_attribute_tuple_one_way(entity, attribute, literal)
+        attribute_inv = attribute.strip() + str(" (INV)")
+        self.__insert_attribute_tuple_one_way(literal, attribute_inv, entity)
+
+    def __insert_attribute_tuple_one_way(self, entity: str, attribute: str, literal: str):
         ent, attr, val = self.get_entity(entity), self.get_attribute(attribute), self.get_literal(literal)
         ent.add_attribute_tuple(attribute=attr, literal=val)
         attr.add_attribute_tuple(entity=ent, literal=val)
@@ -176,8 +186,8 @@ class KG:
         print("- Relation Tuple Number: " + str(len(self.relation_tuple_list)))
         print("- Attribute Tuple Number: " + str(len(self.attribute_tuple_list)))
         print("- Entity Number: " + str(len(self.entity_set)))
-        print("- Relation Number: " + str(len(self.relation_set)))
-        print("- Attribute Number: " + str(len(self.attribute_set)))
+        print("- Relation Number: " + str(len(self.relation_set) / 2))
+        print("- Attribute Number: " + str(len(self.attribute_set) / 2))
         print("- Literal Number: " + str(len(self.literal_set)))
         print("- Functionality Statistics:")
         print("--- TOP-10 Relations (Func) ---")
