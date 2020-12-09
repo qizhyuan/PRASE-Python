@@ -105,19 +105,29 @@ class KGs:
     def __refine_ent_lite_candidate(self):
         # self.ent_lite_align_set = set()
         ent_lite_align_dict, refined_tuple_dict = self.lite_align_dict.copy(), self.lite_align_tuple_dict.copy()
+        ent_lite_align_dict_tmp = dict()
         for (obj_l, obj_r_dict) in self.ent_align_candidate_dict.items():
+            if obj_l.affiliation is self.kg_r:
+                continue
             sorted(obj_r_dict.items(), key=lambda x: x[1], reverse=True)
-            refined_dict = dict()
-            candidate_num = 0
             for (candidate, prob) in obj_r_dict.items():
-                refined_dict[candidate] = prob
-                refined_tuple_dict[(obj_l, candidate)] = prob
-                refined_tuple_dict[(candidate, obj_l)] = prob
-                candidate_num += 1
-                if candidate_num >= self.ent_lite_candidate_num:
-                    break
-            ent_lite_align_dict[obj_l] = refined_dict.copy()
+                if ent_lite_align_dict_tmp.__contains__(candidate) is False:
+                    ent_lite_align_dict_tmp[candidate] = dict()
+                ent_lite_align_dict_tmp[candidate][obj_l] = prob
+                break
             # self.ent_lite_align_set.add(obj_l)
+        for (obj_r, obj_l_dict) in ent_lite_align_dict_tmp.items():
+            sorted(obj_l_dict.items(), key=lambda x: x[1], reverse=True)
+            for (candidate, prob) in obj_l_dict.items():
+                if ent_lite_align_dict.__contains__(candidate) is False:
+                    ent_lite_align_dict[candidate] = dict()
+                if ent_lite_align_dict.__contains__(obj_r) is False:
+                    ent_lite_align_dict[obj_r] = dict()
+                ent_lite_align_dict[candidate][obj_r] = prob
+                ent_lite_align_dict[obj_r][candidate] = prob
+                refined_tuple_dict[(candidate, obj_r)] = prob
+                refined_tuple_dict[(obj_r, candidate)] = prob
+
         for (obj_l, obj_r_dict) in self.rel_attr_align_refined_dict.items():
             for (obj_r, prob) in obj_r_dict.items():
                 refined_tuple_dict[(obj_l, obj_r)] = prob
@@ -307,12 +317,14 @@ class KGs:
                 for (head_counterpart, prob_x) in self.ent_lite_align_refined_dict[head].items():
                     for (tail_counterpart, prob_y) in self.ent_lite_align_refined_dict[tail].items():
                         obj_counterpart_set = target_kg.get_rel_or_attr_set_by_tuple((head_counterpart, tail_counterpart))
-                        # prob_x, prob_y = self.__get_align_prob(head, head_counterpart), self.__get_align_prob(tail, tail_counterpart)
+                        prob_x, prob_y = self.__get_align_prob(head, head_counterpart), self.__get_align_prob(tail, tail_counterpart)
+                        # if prob_y < self.theta:
+                        #     continue
                         val = prob_x * prob_y
                         if val > 1:
                             print("val > 1!\t" + str(val) + "\t" + str(prob_x) + "\t" + str(prob_y))
-                        if val < self.epsilon:
-                            continue
+                        # if val < self.epsilon:
+                        #     continue
                         for obj_counterpart in obj_counterpart_set:
                             if rel_attr_align_prob_dict.__contains__(obj_counterpart) is False:
                                 rel_attr_align_prob_dict[obj_counterpart] = 1.0
@@ -339,12 +351,13 @@ class KGs:
             for (counterpart, prob) in counterpart_dict.items():
                 if norm == 0:
                     print("ZERO")
+                    norm = 1.0
                 norm_prob = prob / norm
                 if not (0.0 <= norm_prob <= 1.0):
                     print("ERROR")
                     print(counterpart.name + "\t" + str(prob) + "\t" + str(norm) + "\t" + str(norm_prob))
-                if norm_prob < self.refine_threshold:
-                    continue
+                # if norm_prob < self.refine_threshold:
+                #     continue
                 if new_rel_attr_align_dict.__contains__(obj) is False:
                     new_rel_attr_align_dict[obj] = dict()
                     new_rel_attr_align_dict[obj][counterpart] = norm_prob
@@ -524,7 +537,7 @@ class KGs:
                 self.__run_per_iteration(init=True)
             else:
                 self.__run_per_iteration()
-            path_validation = "dataset/EN_DE_15K_V1/ent_links"
+            path_validation = "dataset/D_W_15K_V2/ent_links"
             for j in range(9):
                 validate_threshold = 0.1 * float(j)
                 self.validate(path_validation, validate_threshold)
@@ -713,7 +726,7 @@ class KGs:
         with open(path, "r", encoding="utf8") as f:
             for line in f.readlines():
                 params = str.strip(line).split("\t")
-                assert len(params) == 2
+                # assert len(params) == 2
                 ent_l, ent_r = params[0].strip(), params[1].strip()
                 obj_l, obj_r = self.kg_l.entity_dict_by_name.get(ent_l), self.kg_r.entity_dict_by_name.get(ent_r)
                 if obj_l is None:
