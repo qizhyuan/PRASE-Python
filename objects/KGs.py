@@ -1,5 +1,7 @@
 import os
 import random
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait, ALL_COMPLETED
 from objects.KG import KG
 
 
@@ -147,15 +149,87 @@ class KGs:
         self.refined_tuple_dict = refined_tuple_dict.copy()
 
     def __ent_lite_align_per_iteration(self):
-        kg_l_ent_list = list(self.kg_l.entity_set)
-        random.shuffle(kg_l_ent_list)
-        for ent in kg_l_ent_list:
-            self.__find_counterpart_of_ent(ent)
-        kg_r_ent_list = list(self.kg_r.entity_set)
-        random.shuffle(kg_r_ent_list)
-        for ent in kg_r_ent_list:
-            self.__find_counterpart_of_ent(ent)
+        # kg_l_ent_list = list(self.kg_l.entity_set)
+        # kg_r_ent_list = list(self.kg_r.entity_set)
+        kg_ent_list = list(self.kg_l.entity_set | self.kg_r.entity_set)
+        # random.shuffle(kg_l_ent_list)
+
+        # kg_ent_block = self.__list_split_by_num(kg_ent_list, 16)
+
+        # random.shuffle(kg_r_ent_list)
+        # kg_r_ent_block = self.__list_split_by_num(kg_r_ent_list, 8)
+        executor = ThreadPoolExecutor(max_workers=16)
+        all_task = [executor.submit(self.__find_counterpart_of_ent, ent) for ent in kg_ent_list]
+        # for future in as_completed(all_task):
+        wait(all_task, return_when=ALL_COMPLETED)
+
+
+        # t1 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_l_ent_block[0] + kg_r_ent_block[0]))
+        # t2 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_l_ent_block[1] + kg_r_ent_block[1]))
+        # t3 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_l_ent_block[2] + kg_r_ent_block[2]))
+        # t4 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_l_ent_block[3] + kg_r_ent_block[3]))
+        # t5 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_l_ent_block[4] + kg_r_ent_block[4]))
+        # t6 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_l_ent_block[5] + kg_r_ent_block[5]))
+        # t7 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_l_ent_block[6] + kg_r_ent_block[6]))
+        # t8 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_l_ent_block[7] + kg_r_ent_block[7]))
+        # t1.start()
+        # t2.start()
+        # t3.start()
+        # t4.start()
+        # t5.start()
+        # t6.start()
+        # t7.start()
+        # t8.start()
+        # t1.join()
+        # t2.join()
+        # t3.join()
+        # t4.join()
+        # t5.join()
+        # t6.join()
+        # t7.join()
+        # t8.join()
+
+        # for ent in kg_l_ent_list:
+        #     self.__find_counterpart_of_ent(ent)
+
+        # t1 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_r_ent_block[0]))
+        # t2 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_r_ent_block[1]))
+        # t3 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_r_ent_block[2]))
+        # t4 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_r_ent_block[3]))
+        # t5 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_r_ent_block[4]))
+        # t6 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_r_ent_block[5]))
+        # t7 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_r_ent_block[6]))
+        # t8 = threading.Thread(target=self.__find_counterpart_of_ent_set(kg_r_ent_block[7]))
+        # t1.start()
+        # t2.start()
+        # t3.start()
+        # t4.start()
+        # t5.start()
+        # t6.start()
+        # t7.start()
+        # t8.start()
+        # t1.join()
+        # t2.join()
+        # t3.join()
+        # t4.join()
+        # t5.join()
+        # t6.join()
+        # t7.join()
+        # t8.join()
         self.__rel_attr_align_prob_norm()
+
+    @staticmethod
+    def __list_split_by_num(input_list, num):
+        result = list()
+        block_size = int(len(input_list) / num)
+        for i in range(num - 1):
+            result.append(input_list[i * block_size: (i + 1) * block_size])
+        result.append(input_list[(num - 1) * block_size:])
+        return result
+
+    def __find_counterpart_of_ent_set(self, ent_list):
+        for ent in ent_list:
+            self.__find_counterpart_of_ent(ent)
 
     def __find_counterpart_of_ent(self, ent):
         for (rel, ent_set) in ent.involved_as_tail_dict.items():
@@ -380,7 +454,7 @@ class KGs:
                 self._init = False
             print(str(i + 1) + "-th iteration......")
             self.__run_per_iteration()
-            path_validation = "dataset/EN_FR_15K_V2/ent_links"
+            path_validation = "dataset/EN_FR_100K_V2/ent_links"
             for j in range(10):
                 validate_threshold = 0.1 * float(j)
                 self.validate(path_validation, validate_threshold)
