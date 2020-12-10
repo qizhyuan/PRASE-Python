@@ -92,7 +92,7 @@ kg2 = construct_kg(path_r_2, path_a_2, name="KG2")
 #     print(lite.name + "\t" + lite.value)
 
 #
-kgs = KGs(kg1=kg1, kg2=kg2, iteration=20, ent_lite_candidate_num=10, rel_attr_candidate_num=5, output_threshold=0.8, refine_threshold=0.3, theta=0.1)
+kgs = KGs(kg1=kg1, kg2=kg2, iteration=5, rel_attr_candidate_num=5, output_threshold=0.8, refine_threshold=0.0, theta=0.1)
 # kgs = KGs(kg1=kg1, kg2=kg2, iteration=5, ent_lite_candidate_num=3, rel_attr_candidate_num=3, output_threshold=0.8, refine_threshold=0.1, theta=0.01)
 kgs.run()
 kgs.store_results()

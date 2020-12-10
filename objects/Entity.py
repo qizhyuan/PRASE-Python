@@ -43,11 +43,19 @@ class Entity:
         self.involved_as_tail_dict[relation].add(head)
         self.neighbored_as_tail.add(head)
 
-    def add_attribute_tuple(self, attribute, literal):
+    def add_attribute_as_head(self, literal, attribute):
         if self.involved_as_head_dict.__contains__(attribute) is False:
             self.involved_as_head_dict[attribute] = set()
             self.involved_attr_dict[attribute] = set()
 
         self.involved_as_head_dict[attribute].add(literal)
         self.neighbored_as_head.add(literal)
+
+    def add_attribute_as_tail(self, literal, attribute):
+        if self.involved_as_head_dict.__contains__(attribute) is False:
+            self.involved_as_tail_dict[attribute] = set()
+            self.involved_attr_dict[attribute] = set()
+
+        self.involved_as_tail_dict[attribute].add(literal)
+        self.neighbored_as_tail.add(literal)
 

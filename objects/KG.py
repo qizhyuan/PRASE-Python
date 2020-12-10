@@ -130,7 +130,7 @@ class KG:
 
     def insert_relation_tuple(self, head: str, relation: str, tail: str):
         self.__insert_relation_tuple_one_way(head, relation, tail)
-        relation_inv = relation.strip() + str(" (INV)")
+        relation_inv = relation.strip() + str("-(INV)")
         self.__insert_relation_tuple_one_way(tail, relation_inv, head)
 
     def __insert_relation_tuple_one_way(self, head: str, relation: str, tail: str):
@@ -145,18 +145,27 @@ class KG:
 
     def insert_attribute_tuple(self, entity: str, attribute: str, literal: str):
         self.__insert_attribute_tuple_one_way(entity, attribute, literal)
-        attribute_inv = attribute.strip() + str(" (INV)")
-        self.__insert_attribute_tuple_one_way(literal, attribute_inv, entity)
+        attribute_inv = attribute.strip() + str("-(INV)")
+        self.__insert_attribute_tuple_one_way(entity, attribute_inv, literal, inv=True)
 
-    def __insert_attribute_tuple_one_way(self, entity: str, attribute: str, literal: str):
+    def __insert_attribute_tuple_one_way(self, entity: str, attribute: str, literal: str, inv=False):
         ent, attr, val = self.get_entity(entity), self.get_attribute(attribute), self.get_literal(literal)
-        ent.add_attribute_tuple(attribute=attr, literal=val)
-        attr.add_attribute_tuple(entity=ent, literal=val)
-        val.add_attribute_tuple(entity=ent, attribute=attr)
-        self.attribute_tuple_list.append((ent, attr, val))
-        self.__dict_set_insert_helper(self.rel_or_attr_dict_by_tuple, (ent, val), attr)
-        self.__dict_set_insert_helper(self.ent_or_lite_head_dict_by_tuple, (val, attr), ent)
-        self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (ent, attr), val)
+        if inv:
+            ent.add_attribute_as_tail(literal=val, attribute=attr)
+            attr.add_attribute_tuple(head=val, tail=ent)
+            val.add_attribute_as_head(entity=ent, attribute=attr)
+            self.attribute_tuple_list.append((val, attr, ent))
+            self.__dict_set_insert_helper(self.rel_or_attr_dict_by_tuple, (val, ent), attr)
+            self.__dict_set_insert_helper(self.ent_or_lite_head_dict_by_tuple, (val, attr), ent)
+            self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (val, attr), ent)
+        else:
+            ent.add_attribute_as_head(literal=val, attribute=attr)
+            attr.add_attribute_tuple(head=ent, tail=val)
+            val.add_attribute_as_tail(entity=ent, attribute=attr)
+            self.attribute_tuple_list.append((ent, attr, val))
+            self.__dict_set_insert_helper(self.rel_or_attr_dict_by_tuple, (ent, val), attr)
+            self.__dict_set_insert_helper(self.ent_or_lite_head_dict_by_tuple, (ent, attr), val)
+            self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (ent, attr), val)
 
     def get_rel_or_attr_set_by_tuple(self, tup: tuple):
         return self.rel_or_attr_dict_by_tuple.get(tup, set())

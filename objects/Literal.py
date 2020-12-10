@@ -20,10 +20,16 @@ class Literal:
     def get_type(self):
         return self._type
 
-    def add_attribute_tuple(self, entity, attribute):
+    def add_attribute_as_tail(self, entity, attribute):
         if self.involved_as_tail_dict.__contains__(attribute) is False:
             self.involved_as_tail_dict[attribute] = set()
         self.involved_as_tail_dict[attribute].add(entity)
         self.neighbored_as_tail.add(entity)
+
+    def add_attribute_as_head(self, entity, attribute):
+        if self.involved_as_head_dict.__contains__(attribute) is False:
+            self.involved_as_head_dict[attribute] = set()
+        self.involved_as_head_dict[attribute].add(entity)
+        self.neighbored_as_head.add(entity)
 
 

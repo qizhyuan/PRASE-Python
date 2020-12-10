@@ -10,8 +10,8 @@ class Attribute:
 
         self.frequency = 0
 
-        self.entity_set = set()
-        self.literal_set = set()
+        self.head_ent_set = set()
+        self.tail_ent_set = set()
         self.tuple_set = set()
 
         self.functionality = 0.0
@@ -24,14 +24,14 @@ class Attribute:
     def get_type(self):
         return self._type
 
-    def add_attribute_tuple(self, entity, literal):
-        self.entity_set.add(entity)
-        self.literal_set.add(literal)
-        self.tuple_set.add((entity, literal))
+    def add_attribute_tuple(self, head, tail):
+        self.head_ent_set.add(head)
+        self.tail_ent_set.add(tail)
+        self.tuple_set.add((head, tail))
         self.frequency += 1
 
     def calculate_functionality(self):
         if self.frequency == 0:
             return
-        self.functionality = len(self.entity_set) / self.frequency
-        self.functionality_inv = len(self.literal_set) / self.frequency
+        self.functionality = len(self.head_ent_set) / self.frequency
+        self.functionality_inv = len(self.tail_ent_set) / self.frequency
