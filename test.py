@@ -71,11 +71,11 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
 #
 # path_r_2 = "dataset/ntriples/NCI_whole_ontology"
 
-path_r_1 = "dataset/D_W_100K_V2/rel_triples_1"
-path_a_1 = "dataset/D_W_100K_V2/attr_triples_1"
+path_r_1 = "dataset/EN_FR_15K_V2/rel_triples_1"
+path_a_1 = "dataset/EN_FR_15K_V2/attr_triples_1"
 # #
-path_r_2 = "dataset/D_W_100K_V2/rel_triples_2"
-path_a_2 = "dataset/D_W_100K_V2/attr_triples_2"
+path_r_2 = "dataset/EN_FR_15K_V2/rel_triples_2"
+path_a_2 = "dataset/EN_FR_15K_V2/attr_triples_2"
 # #
 # path_validation = "dataset/D_W_15K_V2/ent_links"
 #

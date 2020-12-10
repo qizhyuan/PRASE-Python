@@ -129,6 +129,16 @@ class KGs:
                         ent_lite_align_dict[obj_r][obj_l] = prob
                         refined_tuple_dict[(obj_l, obj_r)] = prob
                         refined_tuple_dict[(obj_r, obj_l)] = prob
+        for (obj, counterpart_dict) in ent_lite_align_dict_tmp.items():
+            if not ent_lite_align_dict.__contains__(obj):
+                for (counterpart, prob) in ent_lite_align_dict_tmp[obj].items():
+                    if not ent_lite_align_dict.__contains__(counterpart):
+                        ent_lite_align_dict[obj] = dict()
+                        ent_lite_align_dict[counterpart] = dict()
+                        ent_lite_align_dict[obj][counterpart] = prob
+                        ent_lite_align_dict[counterpart][obj] = prob
+                        refined_tuple_dict[(obj, counterpart)] = prob
+                        refined_tuple_dict[(counterpart, obj)] = prob
 
         for (obj_l, obj_r_dict) in self.rel_attr_align_refined_dict.items():
             for (obj_r, prob) in obj_r_dict.items():
@@ -370,8 +380,8 @@ class KGs:
                 self._init = False
             print(str(i + 1) + "-th iteration......")
             self.__run_per_iteration()
-            path_validation = "dataset/D_W_100K_V2/ent_links"
-            for j in range(9):
+            path_validation = "dataset/EN_FR_15K_V2/ent_links"
+            for j in range(10):
                 validate_threshold = 0.1 * float(j)
                 self.validate(path_validation, validate_threshold)
         print("PARIS Completed!")
