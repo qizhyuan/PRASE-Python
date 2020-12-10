@@ -137,11 +137,11 @@ class KGs:
         self.refined_tuple_dict = refined_tuple_dict.copy()
 
     def __ent_lite_align_per_iteration(self):
-        kg_l_ent_list = list(self.kg_l.entity_set | self.kg_l.literal_set)
+        kg_l_ent_list = list(self.kg_l.entity_set)
         random.shuffle(kg_l_ent_list)
         for ent in kg_l_ent_list:
             self.__find_counterpart_of_ent(ent)
-        kg_r_ent_list = list(self.kg_r.entity_set | self.kg_r.literal_set)
+        kg_r_ent_list = list(self.kg_r.entity_set)
         random.shuffle(kg_r_ent_list)
         for ent in kg_r_ent_list:
             self.__find_counterpart_of_ent(ent)
@@ -150,12 +150,16 @@ class KGs:
     def __find_counterpart_of_ent(self, ent):
         for (rel, ent_set) in ent.involved_as_tail_dict.items():
             for head in ent_set:
+                if self._init and head.get_type() != "LITERAL":
+                    continue
                 for (head_counterpart, head_eqv_prob) in self.__get_counterpart_dict(head).items():
                     if head_eqv_prob < self.theta:
                         continue
                     for (ent_counterpart, tail_eqv_prob) in self.__get_counterpart_dict(ent).items():
                         self.__register_rel_align_prob_norm(rel, head_eqv_prob * tail_eqv_prob)
                     for (rel_counterpart, head_counterpart_tail_set) in head_counterpart.involved_as_head_dict.items():
+                        if rel.get_type() != rel_counterpart.get_type():
+                            break
                         for tail_counterpart in head_counterpart_tail_set:
                             tail_eqv_prob = self.__get_align_prob(ent, tail_counterpart)
                             self.__register_ongoing_rel_align_prob(rel, rel_counterpart, 1.0 - head_eqv_prob * tail_eqv_prob)
@@ -199,6 +203,7 @@ class KGs:
         if value < self.theta or counterpart is None:
             return
         else:
+            # print("ent align: " + ent.name + "\t" + counterpart.name + "\t" + str(value))
             self.__insert_ent_or_lite_tuple(ent, counterpart, value)
 
     @staticmethod
@@ -361,9 +366,11 @@ class KGs:
     def run(self):
         print("Start...")
         for i in range(self.iteration):
+            if i >= 2:
+                self._init = False
             print(str(i + 1) + "-th iteration......")
             self.__run_per_iteration()
-            path_validation = "dataset/D_W_15K_V2/ent_links"
+            path_validation = "dataset/D_W_100K_V2/ent_links"
             for j in range(9):
                 validate_threshold = 0.1 * float(j)
                 self.validate(path_validation, validate_threshold)
