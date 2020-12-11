@@ -86,9 +86,9 @@ kg2 = construct_kg(path_r_2, path_a_2, name="KG2")
 # kg2 = construct_kg(path_r=path_r_2, name="KG2", sep='\t')
 
 #
-kgs = KGs(kg1=kg1, kg2=kg2, iteration=4, theta=0.05)
-# kgs.run(test_path=path_validation)
-kgs.load_params()
+kgs = KGs(kg1=kg1, kg2=kg2, iteration=30, theta=0.1, ent_candidate_num=0)
+kgs.run(test_path=path_validation)
+# kgs.load_params()
 kgs.save_results()
 # kgs.save_params()
 

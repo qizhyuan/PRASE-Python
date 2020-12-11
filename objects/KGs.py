@@ -5,10 +5,11 @@ from objects.KG import KG
 
 
 class KGs:
-    def __init__(self, kg1: KG, kg2: KG, rel_candidate_num=1, theta=0.1, iteration=3):
+    def __init__(self, kg1: KG, kg2: KG, ent_candidate_num=1, rel_candidate_num=1, theta=0.1, iteration=3):
         self.kg_l = kg1
         self.kg_r = kg2
         self.theta = theta
+        self.ent_candidate_num = ent_candidate_num
         self.rel_candidate_num = rel_candidate_num
         self.iteration = iteration
         self.epsilon = 0.01
@@ -78,6 +79,7 @@ class KGs:
     def __run_per_iteration(self):
         print("Alignment...")
         self.__ent_rel_align_per_iteration()
+        self.__ent_bipartite_matching()
         self.__refine_rel_attr_candidate()
         self.__clear_candidate_dict()
         print("Complete an Iteration!")
@@ -87,7 +89,7 @@ class KGs:
         kg_ent_list = list(self.kg_l.entity_set | self.kg_r.entity_set)
         random.shuffle(kg_ent_list)
 
-        executor = ThreadPoolExecutor(max_workers=16)
+        executor = ThreadPoolExecutor(max_workers=4)
         all_task = [executor.submit(self.__find_counterpart_of_ent, ent) for ent in kg_ent_list]
         wait(all_task, return_when=ALL_COMPLETED)
 
@@ -196,6 +198,68 @@ class KGs:
                     new_rel_attr_align_dict[obj][counterpart] = norm_prob
                 self.refined_tuple_candidate_dict[(obj, counterpart)] = norm_prob
         self.rel_align_candidate_dict = new_rel_attr_align_dict.copy()
+
+    def __ent_bipartite_matching(self):
+        visited, aligned_tuple_dict = set(), dict()
+
+        def is_match(a, b):
+            a_c, b_c = None, None
+            for (e1, _) in self.ent_align_refined_dict[a].items():
+                if e1 not in visited:
+                    a_c = e1
+                    break
+            for (e2, _) in self.ent_align_refined_dict.get(b, dict()).items():
+                if e2 not in visited:
+                    b_c = e2
+                    break
+            return (a_c is b) and (b_c is a) and a_c is not None and b_c is not None
+
+        def get_key(x):
+            for (key, value) in x[1].items():
+                return value
+
+        for (ent, counterpart_dict) in self.ent_align_refined_dict.items():
+            sorted(counterpart_dict.items(), key=lambda x: x[1], reverse=True)
+        sorted(self.ent_align_refined_dict.items(), key=get_key, reverse=True)
+
+        for (ent, counterpart_dict) in self.ent_align_refined_dict.items():
+            for (counterpart, prob) in counterpart_dict.items():
+                if counterpart in visited:
+                    continue
+                if is_match(ent, counterpart):
+                    prob_inv = self.ent_align_refined_dict[counterpart][ent]
+                    prob_assigned = max(prob, prob_inv)
+                    aligned_tuple_dict[(ent, counterpart)] = prob_assigned
+                    aligned_tuple_dict[(counterpart, ent)] = prob_assigned
+                    visited.add(ent), visited.add(counterpart)
+                    break
+
+        for (ent, counterpart_dict) in self.ent_align_refined_dict.items():
+            if ent in visited:
+                continue
+            candidate_num = 0
+            for (counterpart, prob) in counterpart_dict.items():
+                if counterpart not in visited:
+                    if candidate_num >= self.ent_candidate_num:
+                        break
+                    aligned_tuple_dict[(ent, counterpart)] = prob
+                    visited.add(ent)
+                    candidate_num += 1
+
+        self.ent_align_refined_dict.clear()
+        self.__tuple_insert_helper(aligned_tuple_dict, self.ent_align_refined_dict)
+
+        for ((l, r), p) in self.refined_tuple_dict.items():
+            if l.is_relation():
+                aligned_tuple_dict[(l, r)] = p
+        self.refined_tuple_dict = aligned_tuple_dict
+
+    @staticmethod
+    def __tuple_insert_helper(tuple_dict: dict, target_dict: dict):
+        for ((l, r), p) in tuple_dict.items():
+            if not target_dict.__contains__(l):
+                target_dict[l] = dict()
+            target_dict[l][r] = p
 
     def __refine_rel_attr_candidate(self):
         rel_attr_align_dict, refined_tuple_dict = dict(), dict()
