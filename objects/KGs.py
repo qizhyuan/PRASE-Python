@@ -41,7 +41,7 @@ class KGs:
         self._rel_or_attr_align_prob_denominator = dict()
 
         self.__init()
-        self._init = True
+        self._init = 1
 
     def __init(self):
         def similarity_func(s1: str, s2: str):
@@ -152,7 +152,7 @@ class KGs:
         # kg_l_ent_list = list(self.kg_l.entity_set)
         # kg_r_ent_list = list(self.kg_r.entity_set)
         kg_ent_list = list(self.kg_l.entity_set | self.kg_r.entity_set)
-        # random.shuffle(kg_l_ent_list)
+        random.shuffle(kg_ent_list)
 
         # kg_ent_block = self.__list_split_by_num(kg_ent_list, 16)
 
@@ -234,7 +234,7 @@ class KGs:
     def __find_counterpart_of_ent(self, ent):
         for (rel, ent_set) in ent.involved_as_tail_dict.items():
             for head in ent_set:
-                if self._init and head.get_type() != "LITERAL":
+                if (self._init <= 3 or self._init % 6 == 0) and head.get_type() != "LITERAL":
                     continue
                 for (head_counterpart, head_eqv_prob) in self.__get_counterpart_dict(head).items():
                     if head_eqv_prob < self.theta:
@@ -255,7 +255,7 @@ class KGs:
         prob_sub = self.__get_align_prob(rel, rel_counterpart)
         prob_sup = self.__get_align_prob(rel_counterpart, rel)
         if prob_sub < self.theta and prob_sup < self.theta:
-            if self._init:
+            if self._init <= 3 or self._init % 6 == 0:
                 prob_sub, prob_sup = self.theta, self.theta
             else:
                 return
@@ -450,11 +450,10 @@ class KGs:
     def run(self):
         print("Start...")
         for i in range(self.iteration):
-            if i >= 2:
-                self._init = False
+            self._init = i
             print(str(i + 1) + "-th iteration......")
             self.__run_per_iteration()
-            path_validation = "dataset/EN_FR_100K_V2/ent_links"
+            path_validation = "dataset/D_W_15K_V1/ent_links"
             for j in range(10):
                 validate_threshold = 0.1 * float(j)
                 self.validate(path_validation, validate_threshold)

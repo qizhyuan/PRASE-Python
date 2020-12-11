@@ -71,11 +71,11 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
 #
 # path_r_2 = "dataset/ntriples/NCI_whole_ontology"
 
-path_r_1 = "dataset/EN_FR_100K_V2/rel_triples_1"
-path_a_1 = "dataset/EN_FR_100K_V2/attr_triples_1"
+path_r_1 = "dataset/D_W_15K_V1/rel_triples_1"
+path_a_1 = "dataset/D_W_15K_V1/attr_triples_1"
 # #
-path_r_2 = "dataset/EN_FR_100K_V2/rel_triples_2"
-path_a_2 = "dataset/EN_FR_100K_V2/attr_triples_2"
+path_r_2 = "dataset/D_W_15K_V1/rel_triples_2"
+path_a_2 = "dataset/D_W_15K_V1/attr_triples_2"
 # #
 # path_validation = "dataset/D_W_15K_V2/ent_links"
 #
@@ -92,7 +92,7 @@ kg2 = construct_kg(path_r_2, path_a_2, name="KG2")
 #     print(lite.name + "\t" + lite.value)
 
 #
-kgs = KGs(kg1=kg1, kg2=kg2, iteration=20, rel_attr_candidate_num=5, output_threshold=0.8, refine_threshold=0.0, theta=0.1)
+kgs = KGs(kg1=kg1, kg2=kg2, iteration=30, rel_attr_candidate_num=5, output_threshold=0.8, refine_threshold=0.0, theta=0.1)
 # kgs = KGs(kg1=kg1, kg2=kg2, iteration=5, ent_lite_candidate_num=3, rel_attr_candidate_num=3, output_threshold=0.8, refine_threshold=0.1, theta=0.01)
 kgs.run()
 kgs.store_results()
