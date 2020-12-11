@@ -1,10 +1,12 @@
 
 class Relation:
-    def __init__(self, idx: int, name: str, preprocess_func, affiliation=None):
-        self._type = "RELATION"
+    def __init__(self, idx: int, name: str, preprocess_func, is_attribute=False, affiliation=None):
+        self._is_attribute = is_attribute
+
         self.id: int = idx
         self.name: str = name.strip()
         self.value = None
+
         self.preprocess_func = preprocess_func
         self.affiliation = affiliation
 
@@ -18,11 +20,19 @@ class Relation:
         self.functionality_inv = 0.0
         self.__init()
 
+    @staticmethod
+    def is_entity():
+        return False
+
+    @staticmethod
+    def is_relation():
+        return True
+
     def __init(self):
         self.value = self.preprocess_func(self.name)
 
-    def get_type(self):
-        return self._type
+    def is_attribute(self):
+        return self._is_attribute
 
     def add_relation_tuple(self, head, tail):
         self.head_ent_set.add(head)

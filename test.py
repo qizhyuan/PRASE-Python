@@ -73,29 +73,25 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
 
 path_r_1 = "dataset/D_W_15K_V1/rel_triples_1"
 path_a_1 = "dataset/D_W_15K_V1/attr_triples_1"
-# #
+
 path_r_2 = "dataset/D_W_15K_V1/rel_triples_2"
 path_a_2 = "dataset/D_W_15K_V1/attr_triples_2"
-# #
-# path_validation = "dataset/D_W_15K_V2/ent_links"
-#
+
+path_validation = "dataset/D_W_15K_V1/ent_links"
+
 kg1 = construct_kg(path_r_1, path_a_1, name="KG1")
 kg2 = construct_kg(path_r_2, path_a_2, name="KG2")
 
 # kg1 = construct_kg(path_r=path_r_1, name="KG1", sep='\t')
 # kg2 = construct_kg(path_r=path_r_2, name="KG2", sep='\t')
 
-# for lite in kg1.literal_set:
-#     print(lite.name + "\t" + lite.value)
 #
-# for lite in kg2.literal_set:
-#     print(lite.name + "\t" + lite.value)
+kgs = KGs(kg1=kg1, kg2=kg2, iteration=4, theta=0.05)
+# kgs.run(test_path=path_validation)
+kgs.load_params()
+kgs.save_results()
+# kgs.save_params()
 
-#
-kgs = KGs(kg1=kg1, kg2=kg2, iteration=30, rel_attr_candidate_num=5, output_threshold=0.8, refine_threshold=0.0, theta=0.1)
-# kgs = KGs(kg1=kg1, kg2=kg2, iteration=5, ent_lite_candidate_num=3, rel_attr_candidate_num=3, output_threshold=0.8, refine_threshold=0.1, theta=0.01)
-kgs.run()
-kgs.store_results()
 # kgs.load_params()
 
 # path_test = "dataset/industry/ent_links"
