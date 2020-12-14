@@ -79,6 +79,7 @@ class KGs:
     def __run_per_iteration(self):
         print("Alignment...")
         self.__ent_rel_align_per_iteration()
+        self.__norm_rel_attr_align_prob()
         self.__ent_bipartite_matching()
         self.__refine_rel_attr_candidate()
         self.__clear_candidate_dict()
@@ -93,11 +94,9 @@ class KGs:
         all_task = [executor.submit(self.__find_counterpart_of_ent, ent) for ent in kg_ent_list]
         wait(all_task, return_when=ALL_COMPLETED)
 
-        self.__norm_rel_attr_align_prob()
-
     def __find_counterpart_of_ent(self, ent):
         for (rel, ent_set) in ent.involved_as_tail_dict.items():
-            if (self._iter_num <= 2 or self._iter_num % 6 == 0) and not rel.is_attribute():
+            if self._iter_num <= 2 and not rel.is_attribute():
                 continue
             for head in ent_set:
                 for (head_counterpart, head_eqv_prob) in self.__get_counterpart_dict(head).items():
@@ -109,7 +108,7 @@ class KGs:
                         if rel.is_attribute() != rel_counterpart.is_attribute():
                             continue
                         for tail_counterpart in head_counterpart_tail_set:
-                            tail_eqv_prob = self.__get_align_prob(ent, tail_counterpart)
+                            tail_eqv_prob = max(self.__get_align_prob(ent, tail_counterpart), self.__get_align_prob(tail_counterpart, ent))
                             self.__register_ongoing_rel_align_prob(rel, rel_counterpart, 1.0 - head_eqv_prob * tail_eqv_prob)
                             self.__register_ent_equality(rel, ent, rel_counterpart, tail_counterpart, head_eqv_prob)
                         self.__update_rel_align_prob(rel, rel_counterpart)
@@ -119,7 +118,7 @@ class KGs:
         prob_sub = self.__get_align_prob(rel, rel_counterpart)
         prob_sup = self.__get_align_prob(rel_counterpart, rel)
         if prob_sub < self.theta and prob_sup < self.theta:
-            if self._iter_num <= 2 or self._iter_num % 6 == 0:
+            if self._iter_num <= 2:
                 prob_sub, prob_sup = self.theta, self.theta
             else:
                 return
@@ -234,7 +233,22 @@ class KGs:
                     visited.add(ent), visited.add(counterpart)
                     break
 
+        residual_ent_dict = dict()
         for (ent, counterpart_dict) in self.ent_align_refined_dict.items():
+            if ent in visited:
+                continue
+            for (counterpart, prob) in counterpart_dict.items():
+                if counterpart in visited:
+                    continue
+                if not residual_ent_dict.__contains__(ent):
+                    residual_ent_dict[ent] = dict()
+                residual_ent_dict[ent][counterpart] = prob
+
+        for (ent, counterpart_dict) in residual_ent_dict.items():
+            sorted(counterpart_dict.items(), key=lambda x: x[1], reverse=True)
+        sorted(residual_ent_dict.items(), key=get_key, reverse=True)
+
+        for (ent, counterpart_dict) in residual_ent_dict.items():
             if ent in visited:
                 continue
             candidate_num = 0
@@ -243,7 +257,8 @@ class KGs:
                     if candidate_num >= self.ent_candidate_num:
                         break
                     aligned_tuple_dict[(ent, counterpart)] = prob
-                    visited.add(ent)
+                    aligned_tuple_dict[(counterpart, ent)] = prob
+                    visited.add(ent), visited.add(counterpart)
                     candidate_num += 1
 
         self.ent_align_refined_dict.clear()
