@@ -236,34 +236,34 @@ class KGs:
                     aligned_tuple_dict[(counterpart, ent)] = prob_assigned
                     visited.add(ent), visited.add(counterpart)
                     break
-
-        residual_ent_dict = dict()
-        for (ent, counterpart_dict) in self.ent_align_refined_dict.items():
-            if ent in visited:
-                continue
-            for (counterpart, prob) in counterpart_dict.items():
-                if counterpart in visited:
+        if self.ent_candidate_num > 0:
+            residual_ent_dict = dict()
+            for (ent, counterpart_dict) in self.ent_align_refined_dict.items():
+                if ent in visited:
                     continue
-                if not residual_ent_dict.__contains__(ent):
-                    residual_ent_dict[ent] = dict()
-                residual_ent_dict[ent][counterpart] = prob
+                for (counterpart, prob) in counterpart_dict.items():
+                    if counterpart in visited:
+                        continue
+                    if not residual_ent_dict.__contains__(ent):
+                        residual_ent_dict[ent] = dict()
+                    residual_ent_dict[ent][counterpart] = prob
 
-        for (ent, counterpart_dict) in residual_ent_dict.items():
-            sorted(counterpart_dict.items(), key=lambda x: x[1], reverse=True)
-        sorted(residual_ent_dict.items(), key=get_key, reverse=True)
+            for (ent, counterpart_dict) in residual_ent_dict.items():
+                sorted(counterpart_dict.items(), key=lambda x: x[1], reverse=True)
+            sorted(residual_ent_dict.items(), key=get_key, reverse=True)
 
-        for (ent, counterpart_dict) in residual_ent_dict.items():
-            if ent in visited:
-                continue
-            candidate_num = 0
-            for (counterpart, prob) in counterpart_dict.items():
-                if counterpart not in visited:
-                    if candidate_num >= self.ent_candidate_num:
-                        break
-                    aligned_tuple_dict[(ent, counterpart)] = prob
-                    aligned_tuple_dict[(counterpart, ent)] = prob
-                    visited.add(ent), visited.add(counterpart)
-                    candidate_num += 1
+            for (ent, counterpart_dict) in residual_ent_dict.items():
+                if ent in visited:
+                    continue
+                candidate_num = 0
+                for (counterpart, prob) in counterpart_dict.items():
+                    if counterpart not in visited:
+                        if candidate_num >= self.ent_candidate_num:
+                            break
+                        aligned_tuple_dict[(ent, counterpart)] = prob
+                        aligned_tuple_dict[(counterpart, ent)] = prob
+                        visited.add(ent), visited.add(counterpart)
+                        candidate_num += 1
 
         self.ent_align_refined_dict.clear()
         self.__tuple_insert_helper(aligned_tuple_dict, self.ent_align_refined_dict)
