@@ -1,4 +1,5 @@
 import random
+import time
 from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
 from objects.KGsUtil import KGsUtil
 from objects.KG import KG
@@ -47,6 +48,7 @@ class KGs:
                 self.lite_align_tuple_dict[(lite_r, lite_l)] = 1.0
 
     def run(self, lite_matching=True, test_path=None):
+        start_time = time.time()
         if lite_matching:
             new_ent_align_refined_dict, new_refined_tuple_dict = self.lite_align_dict.copy(), self.lite_align_tuple_dict.copy()
             new_ent_align_refined_dict.update(self.ent_align_refined_dict)
@@ -63,6 +65,8 @@ class KGs:
                 for j in range(10):
                     self.util.test(path=test_path, threshold=0.1 * float(j))
         print("PARIS Completed!")
+        end_time = time.time()
+        print("Total time: " + str(end_time - start_time))
 
     def test(self, path, threshold=0.0):
         self.util.test(path=path, threshold=threshold)
