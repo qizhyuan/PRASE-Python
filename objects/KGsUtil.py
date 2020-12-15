@@ -59,6 +59,9 @@ class KGsUtil:
                     attr_dict[(obj_l, obj_r)] = [prob, prob_inv]
                 else:
                     rel_dict[(obj_l, obj_r)] = [prob, prob_inv]
+        base, _ = os.path.split(path)
+        if not os.path.exists(base):
+            os.makedirs(base)
         if os.path.exists(path):
             os.remove(path)
         self.__result_writer(path, attr_dict, "Attribute Alignment")
@@ -68,6 +71,9 @@ class KGsUtil:
         return
 
     def save_params(self, path):
+        base, _ = os.path.split(path)
+        if not os.path.exists(base):
+            os.makedirs(base)
         with open(path, "w", encoding="utf-8") as f:
             for ((obj_l, obj_r), prob) in self.kgs.refined_tuple_dict.items():
                 prefix = "L" if obj_l.affiliation is self.kgs.kg_l else "R"

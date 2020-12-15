@@ -79,7 +79,7 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
 # path_a_2 = "dataset/EN_DE_100K_V2/attr_triples_2"
 
 # path_validation = "dataset/EN_DE_100K_V2/ent_links"
-
+# path_validation = "dataset/ntriples/FMA2NCI_mappings"
 # kg1 = construct_kg(path_r_1, path_a_1, name="KG1")
 # kg2 = construct_kg(path_r_2, path_a_2, name="KG2")
 
@@ -90,8 +90,8 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
 # kgs = KGs(kg1=kg1, kg2=kg2, iteration=20, theta=0.1, ent_candidate_num=0)
 # kgs.run(test_path=path_validation)
 # kgs.load_params()
-# kgs.save_results()
-# kgs.save_params()
+# kgs.save_results("output/FMA2NCI/EA_Result.txt")
+# kgs.save_params("output/FMA2NCI/EA_Params.txt")
 
 
 def test(base, iteration=30):
