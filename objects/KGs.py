@@ -13,7 +13,8 @@ class KGs:
         self.ent_candidate_num = ent_candidate_num
         self.rel_candidate_num = rel_candidate_num
         self.iteration = iteration
-        self.epsilon = 0.01
+        self.delta = 0.01
+        self.epsilon = 1.01
 
         self.lite_align_dict = dict()
         self.lite_align_tuple_dict = dict()
@@ -119,14 +120,14 @@ class KGs:
         self.__update_ent_align_prob(ent)
 
     def __register_ent_equality(self, rel, tail, rel_counterpart, tail_counterpart, head_eqv_prob):
-        prob_sub = self.__get_align_prob(rel, rel_counterpart)
-        prob_sup = self.__get_align_prob(rel_counterpart, rel)
+        prob_sub = self.__get_align_prob(rel, rel_counterpart) / self.epsilon
+        prob_sup = self.__get_align_prob(rel_counterpart, rel) / self.epsilon
         if prob_sub < self.theta and prob_sup < self.theta:
             if self._iter_num <= 2:
                 prob_sub, prob_sup = self.theta, self.theta
             else:
                 return
-        func_l, func_r = rel.functionality, rel_counterpart.functionality
+        func_l, func_r = rel.functionality / self.epsilon, rel_counterpart.functionality / self.epsilon
         factor = 1.0
         factor_l = 1.0 - head_eqv_prob * prob_sup * func_r
         factor_r = 1.0 - head_eqv_prob * prob_sub * func_l
@@ -134,7 +135,7 @@ class KGs:
             factor *= factor_l
         if prob_sup >= 0.0 and func_r >= 0.0:
             factor *= factor_r
-        if 1.0 - factor > self.epsilon:
+        if 1.0 - factor > self.delta and not tail.is_literal() and not tail_counterpart.is_literal():
             self.__register_ongoing_ent_align_prob(tail, tail_counterpart, factor)
 
     def __register_ongoing_ent_align_prob(self, ent_l, ent_r, prob):
