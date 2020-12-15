@@ -94,7 +94,7 @@ class KGs:
         kg_ent_list = list(self.kg_l.entity_set | self.kg_r.entity_set)
         random.shuffle(kg_ent_list)
 
-        executor = ThreadPoolExecutor(max_workers=4)
+        executor = ThreadPoolExecutor(max_workers=8)
         all_task = [executor.submit(self.__find_counterpart_of_ent, ent) for ent in kg_ent_list]
         wait(all_task, return_when=ALL_COMPLETED)
 

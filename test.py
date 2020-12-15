@@ -1,6 +1,7 @@
 from objects.KG import KG
 from objects.KGs import KGs
-import re
+import os
+import argparse
 
 
 def construct_kg(path_r, path_a=None, sep='\t', name=None):
@@ -71,26 +72,59 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
 #
 # path_r_2 = "dataset/ntriples/NCI_whole_ontology"
 
-path_r_1 = "dataset/D_Y_100K_V2/rel_triples_1"
-path_a_1 = "dataset/D_Y_100K_V2/attr_triples_1"
+# path_r_1 = "dataset/EN_DE_100K_V2/rel_triples_1"
+# path_a_1 = "dataset/EN_DE_100K_V2/attr_triples_1"
 
-path_r_2 = "dataset/D_Y_100K_V2/rel_triples_2"
-path_a_2 = "dataset/D_Y_100K_V2/attr_triples_2"
+# path_r_2 = "dataset/EN_DE_100K_V2/rel_triples_2"
+# path_a_2 = "dataset/EN_DE_100K_V2/attr_triples_2"
 
-path_validation = "dataset/D_Y_100K_V2/ent_links"
+# path_validation = "dataset/EN_DE_100K_V2/ent_links"
 
-kg1 = construct_kg(path_r_1, path_a_1, name="KG1")
-kg2 = construct_kg(path_r_2, path_a_2, name="KG2")
+# kg1 = construct_kg(path_r_1, path_a_1, name="KG1")
+# kg2 = construct_kg(path_r_2, path_a_2, name="KG2")
 
 # kg1 = construct_kg(path_r=path_r_1, name="KG1", sep='\t')
 # kg2 = construct_kg(path_r=path_r_2, name="KG2", sep='\t')
 
 #
-kgs = KGs(kg1=kg1, kg2=kg2, iteration=20, theta=0.1, ent_candidate_num=0)
-kgs.run(test_path=path_validation)
+# kgs = KGs(kg1=kg1, kg2=kg2, iteration=20, theta=0.1, ent_candidate_num=0)
+# kgs.run(test_path=path_validation)
 # kgs.load_params()
-kgs.save_results()
-kgs.save_params()
+# kgs.save_results()
+# kgs.save_params()
+
+
+def test(base, iteration=30):
+    new_base, name = os.path.split(base)
+    save_path = os.path.join(os.path.join("output", name))
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    path_r_1 = os.path.join(base, "rel_triples_1")
+    path_a_1 = os.path.join(base, "attr_triples_1")
+
+    path_r_2 = os.path.join(base, "rel_triples_2")
+    path_a_2 = os.path.join(base, "attr_triples_2")
+
+    path_validation = os.path.join(base, "ent_links")
+    kg1 = construct_kg(path_r_1, path_a_1, name=str(name + "-KG1"))
+    kg2 = construct_kg(path_r_2, path_a_2, name=str(name + "-KG2"))
+    kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1, ent_candidate_num=0)
+    kgs.run(test_path=path_validation)
+
+    kgs.save_results(os.path.join(save_path, "EA_Result.txt"))
+    kgs.save_params(os.path.join(save_path, "EA_Params.txt"))
+
+
+parser = argparse.ArgumentParser(description="PARIS_PYTHON")
+parser.add_argument('--input', type=str)
+parser.add_argument('--iteration', type=int, default=30)
+
+args = parser.parse_args()
+print(args)
+
+if __name__ == '__main__':
+    test(args.input, args.iteration)
 
 # kgs.load_params()
 
