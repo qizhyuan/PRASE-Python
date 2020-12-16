@@ -112,8 +112,8 @@ def test(base, iteration=30):
     kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1, ent_candidate_num=0)
     kgs.run(test_path=path_validation)
 
-    kgs.save_results(os.path.join(save_path, "EA_Result.txt"))
-    kgs.save_params(os.path.join(save_path, "EA_Params.txt"))
+    # kgs.save_results(os.path.join(save_path, "EA_Result.txt"))
+    # kgs.save_params(os.path.join(save_path, "EA_Params.txt"))
 
 
 parser = argparse.ArgumentParser(description="PARIS_PYTHON")
@@ -123,8 +123,10 @@ parser.add_argument('--iteration', type=int, default=30)
 args = parser.parse_args()
 print(args)
 
-if __name__ == '__main__':
-    test(args.input, args.iteration)
+test("dataset/industry", 20)
+
+# if __name__ == '__main__':
+#     test(args.input, args.iteration)
 
 # kgs.load_params()
 

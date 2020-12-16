@@ -8,14 +8,15 @@ class KGsUtil:
     def test(self, path, threshold):
         correct_num, total_num = 0.0, 0.0
         ent_align_result = set()
-        for (obj_l, obj_r_dict) in self.kgs.ent_align_refined_dict.items():
-            if obj_l.is_literal() or obj_l.affiliation is self.kgs.kg_r:
-                continue
-            for (counterpart, prob) in obj_r_dict.items():
+        for ent_l in self.kgs.kg_l.entity_set:
+            ent_id = ent_l.id
+            counterpart = self.kgs.sub_ent_match[ent_id]
+            if counterpart is not None:
+                prob = self.kgs.sub_ent_prob[ent_id]
                 if prob < threshold:
-                    break
-                ent_align_result.add((obj_l, counterpart))
-                break
+                    continue
+                ent_align_result.add((ent_l, counterpart))
+
         if len(ent_align_result) == 0:
             print("Threshold: " + format(threshold, ".3f") + "\tException: no satisfied alignment result")
             return

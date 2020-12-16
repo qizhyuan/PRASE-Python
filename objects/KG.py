@@ -91,7 +91,7 @@ class KG:
         if self.entity_dict_by_name.__contains__(name):
             return self.entity_dict_by_name.get(name)
         else:
-            entity = Entity(idx=len(self.entity_set), name=name, preprocess_func=self.ent_pre_func, affiliation=self)
+            entity = Entity(idx=len(self.literal_set) + len(self.entity_set), name=name, preprocess_func=self.ent_pre_func, affiliation=self)
             self.entity_set.add(entity)
             self.entity_dict_by_name[entity.name] = entity
             self.entity_dict_by_value[entity.value] = entity
@@ -101,7 +101,7 @@ class KG:
         if self.relation_dict_by_name.__contains__(name):
             return self.relation_dict_by_name.get(name)
         else:
-            relation = Relation(idx=len(self.relation_set), name=name, preprocess_func=self.rel_pre_func,
+            relation = Relation(idx=len(self.attribute_set) + len(self.relation_set), name=name, preprocess_func=self.rel_pre_func,
                                 affiliation=self)
             self.relation_set.add(relation)
             self.relation_dict_by_name[relation.name] = relation
@@ -112,7 +112,7 @@ class KG:
         if self.attribute_dict_by_name.__contains__(name):
             return self.attribute_dict_by_name.get(name)
         else:
-            attribute = Relation(idx=len(self.attribute_set), name=name, preprocess_func=self.attr_pre_func,
+            attribute = Relation(idx=len(self.attribute_set) + len(self.relation_set), name=name, preprocess_func=self.attr_pre_func,
                                  affiliation=self, is_attribute=True)
             self.attribute_set.add(attribute)
             self.attribute_dict_by_name[attribute.name] = attribute
@@ -123,7 +123,7 @@ class KG:
         if self.literal_dict_by_name.__contains__(name):
             return self.literal_dict_by_name.get(name)
         else:
-            literal = Entity(idx=len(self.literal_set), name=name, preprocess_func=self.lite_pre_func,
+            literal = Entity(idx=len(self.literal_set) + len(self.entity_set), name=name, preprocess_func=self.lite_pre_func,
                              affiliation=self, is_literal=True)
             self.literal_set.add(literal)
             self.literal_dict_by_name[literal.name] = literal
