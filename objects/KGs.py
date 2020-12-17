@@ -111,15 +111,15 @@ class KGs:
         # print("Generate queue...")
         ent_queue = self.__generate_queue(kg)
         # print("Mapper running...")
-        thread = Mapper(queue=ent_queue, get_counterpart_and_prob=self.__get_counterpart_and_prob,
+        mapper = Mapper(queue=ent_queue, get_counterpart_and_prob=self.__get_counterpart_and_prob,
                         set_counterpart_and_prob=self.__set_counterpart_and_prob, rel_align_dict=self.rel_align_dict,
                         iter_num=self._iter_num, theta=self.theta, epsilon=self.epsilon, delta=self.delta,
                         ent_align=ent_align)
-        thread.run()
+        mapper.run()
         # thread.join()
         self.rel_ongoing_dict.clear(), self.rel_norm_dict.clear()
         # print("Mapper-INV running...")
-        rel_ongoing_dict, rel_norm_dict = thread.get_rel_align_result()
+        rel_ongoing_dict, rel_norm_dict = mapper.get_rel_align_result()
         self.__merge_rel_ongoing_dict(self.rel_ongoing_dict, rel_ongoing_dict, rel_norm_dict)
         self.__merge_rel_norm_dict(self.rel_norm_dict, rel_norm_dict)
         # print("Relation alignment updating...")
