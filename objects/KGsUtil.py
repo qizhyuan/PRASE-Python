@@ -2,8 +2,9 @@ import os
 
 
 class KGsUtil:
-    def __init__(self, kgs):
+    def __init__(self, kgs, get_counterpart_and_prob):
         self.kgs = kgs
+        self.__get_counterpart_and_prob = get_counterpart_and_prob
 
     def test(self, path, threshold):
         correct_num, total_num = 0.0, 0.0
@@ -44,22 +45,31 @@ class KGsUtil:
 
     def save_results(self, path):
         ent_dict, lite_dict, attr_dict, rel_dict = dict(), dict(), dict(), dict()
-        for ((obj_l, obj_r), prob) in self.kgs.refined_tuple_dict.items():
-            if prob < self.kgs.theta:
-                continue
-            if obj_l.affiliation is self.kgs.kg_r:
-                continue
-            if obj_l.is_entity():
-                if obj_l.is_literal():
-                    lite_dict[(obj_l, obj_r)] = [prob]
+        for obj in (self.kgs.kg_l.entity_set | self.kgs.kg_l.literal_set):
+            counterpart, prob = self.__get_counterpart_and_prob(obj)
+            if counterpart is not None:
+                if obj.is_literal():
+                    lite_dict[(obj, counterpart)] = [prob]
                 else:
-                    ent_dict[(obj_l, obj_r)] = [prob]
-            else:
-                prob_inv = self.kgs.refined_tuple_dict.get((obj_r, obj_l), 0.0)
-                if obj_l.is_attribute():
-                    attr_dict[(obj_l, obj_r)] = [prob, prob_inv]
-                else:
-                    rel_dict[(obj_l, obj_r)] = [prob, prob_inv]
+                    ent_dict[(obj, counterpart)] = [prob]
+
+        for (rel, rel_counterpart_dict) in self.kgs.rel_align_dict.items():
+            if rel.affiliation is self.kgs.kg_r:
+                continue
+            dictionary = attr_dict if rel.is_attribute() else rel_dict
+            for (rel_counterpart, prob) in rel_counterpart_dict.items():
+                if prob > self.kgs.theta:
+                    dictionary[(rel, rel_counterpart)] = [prob, 0.0]
+
+        for (rel, rel_counterpart_dict) in self.kgs.rel_align_dict.items():
+            if rel.affiliation is self.kgs.kg_l:
+                continue
+            dictionary = attr_dict if rel.is_attribute() else rel_dict
+            for (rel_counterpart, prob) in rel_counterpart_dict.items():
+                if prob > self.kgs.theta:
+                    if not dictionary.__contains__((rel_counterpart, rel)):
+                        dictionary[(rel_counterpart, rel)] = [0.0, 0.0]
+                    dictionary[(rel_counterpart, rel)][-1] = prob
         base, _ = os.path.split(path)
         if not os.path.exists(base):
             os.makedirs(base)
@@ -76,9 +86,19 @@ class KGsUtil:
         if not os.path.exists(base):
             os.makedirs(base)
         with open(path, "w", encoding="utf-8") as f:
-            for ((obj_l, obj_r), prob) in self.kgs.refined_tuple_dict.items():
-                prefix = "L" if obj_l.affiliation is self.kgs.kg_l else "R"
-                f.write("\t".join([prefix, obj_l.name, obj_r.name, str(prob)]) + "\n")
+            for obj in (self.kgs.kg_l.entity_set | self.kgs.kg_l.literal_set):
+                counterpart, prob = self.__get_counterpart_and_prob(obj)
+                if counterpart is not None:
+                    f.write("\t".join(["L", obj.name, counterpart.name, str(prob)]) + "\n")
+            for obj in (self.kgs.kg_r.entity_set | self.kgs.kg_r.literal_set):
+                counterpart, prob = self.__get_counterpart_and_prob(obj)
+                if counterpart is not None:
+                    f.write("\t".join(["R", obj.name, counterpart.name, str(prob)]) + "\n")
+            for (rel, rel_counterpart_dict) in self.kgs.rel_align_dict.items():
+                for (rel_counterpart, prob) in rel_counterpart_dict.items():
+                    if prob > 0.0:
+                        prefix = "L" if rel.affiliation is self.kgs.kg_l else "R"
+                        f.write("\t".join([prefix, rel.name, rel_counterpart.name, str(prob)]) + "\n")
         return
 
     def load_params(self, path):
@@ -95,9 +115,13 @@ class KGsUtil:
                     obj_l, obj_r = self.kgs.kg_r.get_object_by_name(name_l), self.kgs.kg_l.get_object_by_name(name_r)
                 assert (obj_l is not None and obj_r is not None)
                 if obj_l.is_entity():
-                    self.__params_loader_helper(self.kgs.ent_align_refined_dict, self.kgs.refined_tuple_dict, obj_l, obj_r, prob)
+                    idx_l = obj_l.id
+                    if prefix == "L":
+                        self.kgs.sub_ent_match[idx_l], self.kgs.sub_ent_prob[idx_l] = obj_r, prob
+                    else:
+                        self.kgs.sup_ent_match[idx_l], self.kgs.sup_ent_prob[idx_l] = obj_r, prob
                 else:
-                    self.__params_loader_helper(self.kgs.rel_align_refined_dict, self.kgs.refined_tuple_dict, obj_l, obj_r, prob)
+                    self.__params_loader_helper(self.kgs.rel_align_dict, obj_l, obj_r, prob)
         return
 
     @staticmethod
@@ -109,8 +133,7 @@ class KGsUtil:
             f.write("\n")
 
     @staticmethod
-    def __params_loader_helper(dict_by_key: dict, dict_by_tuple: dict, key1, key2, value):
+    def __params_loader_helper(dict_by_key: dict, key1, key2, value):
         if not dict_by_key.__contains__(key1):
             dict_by_key[key1] = dict()
         dict_by_key[key1][key2] = value
-        dict_by_tuple[(key1, key2)] = value

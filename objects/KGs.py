@@ -2,7 +2,6 @@ import time
 import gc
 import random
 from queue import Queue
-# from multiprocessing import Queue
 from objects.KG import KG
 from objects.KGsUtil import KGsUtil
 from objects.Mapper import Mapper
@@ -18,7 +17,6 @@ class KGs:
         self.iteration = iteration
         self.delta = 0.01
         self.epsilon = 1.01
-        self.proc_num = 1
         self.const = 10.0
 
         self.rel_ongoing_dict = dict()
@@ -31,7 +29,7 @@ class KGs:
         self.sup_ent_prob = None
 
         self._iter_num = 0
-        self.util = KGsUtil(self)
+        self.util = KGsUtil(self, self.__get_counterpart_and_prob)
         self.__init()
 
     def __init(self):
@@ -49,7 +47,7 @@ class KGs:
                 self.sub_ent_match[l_id], self.sup_ent_match[r_id] = lite_r, lite_l
                 self.sub_ent_prob[l_id], self.sup_ent_prob[r_id] = 1.0, 1.0
 
-    def _get_counterpart_and_prob(self, ent):
+    def __get_counterpart_and_prob(self, ent):
         source = ent.affiliation is self.kg_l
         counterpart = self.sub_ent_match[ent.id] if source else self.sup_ent_match[ent.id]
         if counterpart is None:
@@ -57,7 +55,7 @@ class KGs:
         else:
             return counterpart, self.sub_ent_prob[ent.id] if source else self.sup_ent_prob[ent.id]
 
-    def _set_counterpart_and_prob(self, ent_l, ent_r, prob):
+    def __set_counterpart_and_prob(self, ent_l, ent_r, prob):
         source = ent_l.affiliation is self.kg_l
         l_id, r_id = ent_l.id, ent_r.id
         curr_prob = self.sub_ent_prob[l_id] if source else self.sup_ent_prob[l_id]
@@ -68,14 +66,8 @@ class KGs:
         else:
             self.sup_ent_match[l_id], self.sup_ent_prob[l_id] = ent_r, prob
 
-    def run(self, lite_matching=True, test_path=None):
+    def run(self, test_path=None):
         start_time = time.time()
-        # if lite_matching:
-        #     new_ent_align_refined_dict, new_refined_tuple_dict = self.lite_align_dict.copy(), self.lite_align_tuple_dict.copy()
-        #     new_ent_align_refined_dict.update(self.ent_align_refined_dict)
-        #     new_refined_tuple_dict.update(self.refined_tuple_dict)
-        #     self.ent_align_refined_dict = new_ent_align_refined_dict
-        #     self.refined_tuple_dict = new_refined_tuple_dict
         print("Start...")
         for i in range(self.iteration):
             self._iter_num = i
@@ -102,42 +94,35 @@ class KGs:
         self.util.load_params(path=path)
 
     def __run_per_iteration(self):
-        print("Alignment...")
+        # print("Start one way...")
         self.__run_per_iteration_one_way(self.kg_l)
-        print("Finish one way...")
-        print("Garbage collecting...")
+        # print("Finish one way...")
         gc.collect()
-        print("Matching...")
+        # print("Matching...")
         self.__ent_bipartite_matching()
-        print("Finish Matching...")
+        # print("Start one way...")
         self.__run_per_iteration_one_way(self.kg_r, ent_align=False)
-        print("Finish one way...")
-        print("Garbage collecting...")
+        # print("Finish one way...")
         gc.collect()
         print("Complete an Iteration!")
         return
 
     def __run_per_iteration_one_way(self, kg: KG, ent_align=True):
-        threads = []
-        print("Generate queue...")
+        # print("Generate queue...")
         ent_queue = self.__generate_queue(kg)
-        print("Thread running...")
-        for _ in range(self.proc_num):
-            thread = Mapper(queue=ent_queue, get_counterpart_and_prob=self._get_counterpart_and_prob,
-                            set_counterpart_and_prob=self._set_counterpart_and_prob, rel_align_dict=self.rel_align_dict,
-                            iter_num=self._iter_num, theta=self.theta, epsilon=self.epsilon, delta=self.delta, ent_align=ent_align)
-            threads.append(thread)
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        # print("Mapper running...")
+        thread = Mapper(queue=ent_queue, get_counterpart_and_prob=self.__get_counterpart_and_prob,
+                        set_counterpart_and_prob=self.__set_counterpart_and_prob, rel_align_dict=self.rel_align_dict,
+                        iter_num=self._iter_num, theta=self.theta, epsilon=self.epsilon, delta=self.delta,
+                        ent_align=ent_align)
+        thread.run()
+        # thread.join()
         self.rel_ongoing_dict.clear(), self.rel_norm_dict.clear()
-        print("Thread running...")
-        for thread in threads:
-            rel_ongoing_dict, rel_norm_dict = thread.get_rel_align_result()
-            self.__merge_rel_ongoing_dict(self.rel_ongoing_dict, rel_ongoing_dict, rel_norm_dict)
-            self.__merge_rel_norm_dict(self.rel_norm_dict, rel_norm_dict)
-        print("Relation align updating...")
+        # print("Mapper-INV running...")
+        rel_ongoing_dict, rel_norm_dict = thread.get_rel_align_result()
+        self.__merge_rel_ongoing_dict(self.rel_ongoing_dict, rel_ongoing_dict, rel_norm_dict)
+        self.__merge_rel_norm_dict(self.rel_norm_dict, rel_norm_dict)
+        # print("Relation alignment updating...")
         self.__update_rel_align_dict()
 
     @staticmethod
@@ -172,7 +157,6 @@ class KGs:
                 norm_dict_l[rel] += norm
 
     def __update_rel_align_dict(self):
-        # self.rel_align_dict.clear()
         for (rel, counterpart_dict) in self.rel_ongoing_dict.items():
             norm = self.rel_norm_dict.get(rel, 1.0)
             if not self.rel_align_dict.__contains__(rel):

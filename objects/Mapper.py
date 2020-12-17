@@ -1,12 +1,10 @@
-# from multiprocessing import Process
-from threading import Thread
-from queue import Queue
+# from threading import Thread
 
 
-class Mapper(Thread):
-    def __init__(self, queue: Queue, get_counterpart_and_prob, set_counterpart_and_prob, rel_align_dict,
+class Mapper:
+    def __init__(self, queue, get_counterpart_and_prob, set_counterpart_and_prob, rel_align_dict,
                  iter_num, theta, epsilon, delta, ent_align=True):
-        super(Mapper, self).__init__()
+        # super(Mapper, self).__init__()
         self.queue = queue
         self._theta = theta
         self._iter_num = iter_num

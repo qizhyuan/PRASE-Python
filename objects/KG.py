@@ -31,9 +31,9 @@ class KG:
         self.relation_tuple_list = list()
         self.attribute_tuple_list = list()
 
-        self.rel_or_attr_dict_by_tuple = dict()
-        self.ent_or_lite_head_dict_by_tuple = dict()
-        self.ent_or_lite_tail_dict_by_tuple = dict()
+        # self.rel_or_attr_dict_by_tuple = dict()
+        # self.ent_or_lite_head_dict_by_tuple = dict()
+        # self.ent_or_lite_tail_dict_by_tuple = dict()
 
         self.relation_set_func_ranked = list()
         self.relation_set_func_inv_ranked = list()
@@ -43,43 +43,44 @@ class KG:
         self.__init()
 
     def __init(self):
-        def default_pre_func(name: str):
-            pattern = r'"?<?([^">]*)>?"?.*'
-            matchObj = re.match(pattern=pattern, string=name)
-            if matchObj is None:
-                print("Match Error: " + name)
-                return name
-            value = matchObj.group(1).strip()
-            if "/" in value:
-                value = value.split(sep="/")[-1].strip()
-            return value
-
-        def default_pre_func_for_literal(name: str):
-            value = name.split("^")[0].strip()
-            start, end = 0, len(value) - 1
-            if start < len(value) and value[start] == '<':
-                start += 1
-            if end > 0 and value[end] == '>':
-                end -= 1
-            if start < len(value) and value[start] == '"':
-                start += 1
-            if end > 0 and value[end] == '"':
-                end -= 1
-            if start > end:
-                print("Match Error: " + name)
-                return name
-
-            value = value[start: end + 1].strip()
-            return value
-
         if self.ent_pre_func is None:
-            self.ent_pre_func = default_pre_func
+            self.ent_pre_func = self.default_pre_func
         if self.rel_pre_func is None:
-            self.rel_pre_func = default_pre_func
+            self.rel_pre_func = self.default_pre_func
         if self.attr_pre_func is None:
-            self.attr_pre_func = default_pre_func
+            self.attr_pre_func = self.default_pre_func
         if self.lite_pre_func is None:
-            self.lite_pre_func = default_pre_func_for_literal
+            self.lite_pre_func = self.default_pre_func_for_literal
+
+    @staticmethod
+    def default_pre_func(name: str):
+        pattern = r'"?<?([^">]*)>?"?.*'
+        matchObj = re.match(pattern=pattern, string=name)
+        if matchObj is None:
+            print("Match Error: " + name)
+            return name
+        value = matchObj.group(1).strip()
+        if "/" in value:
+            value = value.split(sep="/")[-1].strip()
+        return value
+
+    @staticmethod
+    def default_pre_func_for_literal(name: str):
+        value = name.split("^")[0].strip()
+        start, end = 0, len(value) - 1
+        if start < len(value) and value[start] == '<':
+            start += 1
+        if end > 0 and value[end] == '>':
+            end -= 1
+        if start < len(value) and value[start] == '"':
+            start += 1
+        if end > 0 and value[end] == '"':
+            end -= 1
+        if start > end:
+            print("Match Error: " + name)
+            return name
+        value = value[start: end + 1].strip()
+        return value
 
     @staticmethod
     def __dict_set_insert_helper(dictionary: dict, key, value):
@@ -149,27 +150,27 @@ class KG:
         rel.add_relation_tuple(head=ent_h, tail=ent_t)
         ent_t.add_relation_as_tail(relation=rel, head=ent_h)
         self.relation_tuple_list.append((ent_h, rel, ent_t))
-        self.__dict_set_insert_helper(self.rel_or_attr_dict_by_tuple, (ent_h, ent_t), rel)
-        self.__dict_set_insert_helper(self.ent_or_lite_head_dict_by_tuple, (ent_t, rel), ent_h)
-        self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (ent_h, rel), ent_t)
+        # self.__dict_set_insert_helper(self.rel_or_attr_dict_by_tuple, (ent_h, ent_t), rel)
+        # self.__dict_set_insert_helper(self.ent_or_lite_head_dict_by_tuple, (ent_t, rel), ent_h)
+        # self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (ent_h, rel), ent_t)
 
     def __insert_attribute_tuple_one_way(self, ent, attr, val):
         ent.add_relation_as_head(relation=attr, tail=val)
         attr.add_relation_tuple(head=ent, tail=val)
         val.add_relation_as_tail(relation=attr, head=ent)
         self.attribute_tuple_list.append((ent, attr, val))
-        self.__dict_set_insert_helper(self.rel_or_attr_dict_by_tuple, (ent, val), attr)
-        self.__dict_set_insert_helper(self.ent_or_lite_head_dict_by_tuple, (val, attr), ent)
-        self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (ent, attr), val)
+        # self.__dict_set_insert_helper(self.rel_or_attr_dict_by_tuple, (ent, val), attr)
+        # self.__dict_set_insert_helper(self.ent_or_lite_head_dict_by_tuple, (val, attr), ent)
+        # self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (ent, attr), val)
 
-    def get_rel_or_attr_set_by_tuple(self, tup: tuple):
-        return self.rel_or_attr_dict_by_tuple.get(tup, set())
-
-    def get_ent_or_lite_head_set_by_tuple(self, tup: tuple):
-        return self.ent_or_lite_head_dict_by_tuple.get(tup, set())
-
-    def get_ent_or_lite_tail_set_by_tuple(self, tup: tuple):
-        return self.ent_or_lite_tail_dict_by_tuple.get(tup, set())
+    # def get_rel_or_attr_set_by_tuple(self, tup: tuple):
+    #     return self.rel_or_attr_dict_by_tuple.get(tup, set())
+    #
+    # def get_ent_or_lite_head_set_by_tuple(self, tup: tuple):
+    #     return self.ent_or_lite_head_dict_by_tuple.get(tup, set())
+    #
+    # def get_ent_or_lite_tail_set_by_tuple(self, tup: tuple):
+    #     return self.ent_or_lite_tail_dict_by_tuple.get(tup, set())
 
     def get_object_by_name(self, name: str):
         name = name.strip()

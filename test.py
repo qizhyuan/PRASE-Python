@@ -12,7 +12,6 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
                 if len(line.strip()) == 0:
                     continue
                 params = str.strip(line).split(sep=sep)
-                # assert len(params) == 3
                 if len(params) != 3:
                     print(line)
                     continue
@@ -111,9 +110,8 @@ def test(base, iteration=30):
     kg2 = construct_kg(path_r_2, path_a_2, name=str(name + "-KG2"))
     kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1, ent_candidate_num=0)
     kgs.run(test_path=path_validation)
-
-    # kgs.save_results(os.path.join(save_path, "EA_Result.txt"))
-    # kgs.save_params(os.path.join(save_path, "EA_Params.txt"))
+    kgs.save_results(os.path.join(save_path, "EA_Result.txt"))
+    kgs.save_params(os.path.join(save_path, "EA_Params.txt"))
 
 
 parser = argparse.ArgumentParser(description="PARIS_PYTHON")
@@ -121,12 +119,11 @@ parser.add_argument('--input', type=str)
 parser.add_argument('--iteration', type=int, default=30)
 
 args = parser.parse_args()
-print(args)
 
-test("dataset/industry", 20)
+# test("dataset/industry", 3)
 
-# if __name__ == '__main__':
-#     test(args.input, args.iteration)
+if __name__ == '__main__':
+    test(args.input, args.iteration)
 
 # kgs.load_params()
 
