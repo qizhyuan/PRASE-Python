@@ -125,28 +125,3 @@ args = parser.parse_args()
 if __name__ == '__main__':
     test(args.input, args.iteration)
 
-# kgs.load_params()
-
-# path_test = "dataset/industry/ent_links"
-# with open(path_test, "r", encoding="utf-8") as f:
-#     num = 2000
-#     for line in f.readlines():
-#         params = str.strip(line).split(sep='\t')
-#         assert len(params) == 2
-#         e, a = params[0].strip(), params[1].strip()
-#         kgs.insert_ent_tuple(e, a, 1.0)
-#         num -= 1
-#         if num <= 0:
-#             break
-# kgs.load_params()
-# kgs.run()
-
-# kgs.validate(path_validation, threshold=0.0)
-# kgs.store_params()
-
-# for i in range(9):
-#     validate_threshold = 0.1 * float(i)
-#     kgs.validate(path_validation, validate_threshold)
-
-# kgs.store_results()
-# kgs.store_params()
