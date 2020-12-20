@@ -108,8 +108,9 @@ def test(base, iteration=30):
     path_validation = os.path.join(base, "ent_links")
     kg1 = construct_kg(path_r_1, path_a_1, name=str(name + "-KG1"))
     kg2 = construct_kg(path_r_2, path_a_2, name=str(name + "-KG2"))
-    kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1, ent_candidate_num=0)
+    kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1)
     kgs.run(test_path=path_validation)
+    # kgs.load_params(os.path.join(save_path, "EA_Params.txt"))
     kgs.save_results(os.path.join(save_path, "EA_Result.txt"))
     kgs.save_params(os.path.join(save_path, "EA_Params.txt"))
 
@@ -120,8 +121,6 @@ parser.add_argument('--iteration', type=int, default=30)
 
 args = parser.parse_args()
 
-# test("dataset/industry", 3)
-
 if __name__ == '__main__':
     test(args.input, args.iteration)
-
+    # test("dataset/EN_DE_15K_V2", 10)

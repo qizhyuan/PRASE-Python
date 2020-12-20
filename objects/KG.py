@@ -28,17 +28,22 @@ class KG:
         self.attribute_dict_by_value = dict()
         self.literal_dict_by_value = dict()
 
+        self.entity_dict_by_id = dict()
+        self.relation_dict_by_id = dict()
+
         self.relation_tuple_list = list()
         self.attribute_tuple_list = list()
-
-        # self.rel_or_attr_dict_by_tuple = dict()
-        # self.ent_or_lite_head_dict_by_tuple = dict()
-        # self.ent_or_lite_tail_dict_by_tuple = dict()
 
         self.relation_set_func_ranked = list()
         self.relation_set_func_inv_ranked = list()
         self.attribute_set_func_ranked = list()
         self.attribute_set_func_inv_ranked = list()
+
+        self.functionality_dict = dict()
+        self.ent_id_list = list()
+        self.fact_dict_by_head = dict()
+        self.fact_dict_by_tail = dict()
+        self.is_literal_list = list()
 
         self.__init()
 
@@ -96,6 +101,9 @@ class KG:
             self.entity_set.add(entity)
             self.entity_dict_by_name[entity.name] = entity
             self.entity_dict_by_value[entity.value] = entity
+            self.entity_dict_by_id[entity.id] = entity
+            self.ent_id_list.append(entity.id)
+            self.is_literal_list.append(False)
             return entity
 
     def get_relation(self, name: str):
@@ -107,6 +115,7 @@ class KG:
             self.relation_set.add(relation)
             self.relation_dict_by_name[relation.name] = relation
             self.relation_dict_by_value[relation.value] = relation
+            self.relation_dict_by_id[relation.id] = relation
             return relation
 
     def get_attribute(self, name: str):
@@ -118,6 +127,7 @@ class KG:
             self.attribute_set.add(attribute)
             self.attribute_dict_by_name[attribute.name] = attribute
             self.attribute_dict_by_value[attribute.value] = attribute
+            self.relation_dict_by_id[attribute.id] = attribute
             return attribute
 
     def get_literal(self, name: str):
@@ -129,6 +139,8 @@ class KG:
             self.literal_set.add(literal)
             self.literal_dict_by_name[literal.name] = literal
             self.literal_dict_by_value[literal.value] = literal
+            self.entity_dict_by_id[literal.id] = literal
+            self.is_literal_list.append(True)
             return literal
 
     def insert_relation_tuple(self, head: str, relation: str, tail: str):
@@ -150,27 +162,24 @@ class KG:
         rel.add_relation_tuple(head=ent_h, tail=ent_t)
         ent_t.add_relation_as_tail(relation=rel, head=ent_h)
         self.relation_tuple_list.append((ent_h, rel, ent_t))
-        # self.__dict_set_insert_helper(self.rel_or_attr_dict_by_tuple, (ent_h, ent_t), rel)
-        # self.__dict_set_insert_helper(self.ent_or_lite_head_dict_by_tuple, (ent_t, rel), ent_h)
-        # self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (ent_h, rel), ent_t)
+        if not self.fact_dict_by_head.__contains__(ent_h.id):
+            self.fact_dict_by_head[ent_h.id] = list()
+        if not self.fact_dict_by_tail.__contains__(ent_t.id):
+            self.fact_dict_by_tail[ent_t.id] = list()
+        self.fact_dict_by_head[ent_h.id].append((rel.id, ent_t.id))
+        self.fact_dict_by_tail[ent_t.id].append((rel.id, ent_h.id))
 
     def __insert_attribute_tuple_one_way(self, ent, attr, val):
         ent.add_relation_as_head(relation=attr, tail=val)
         attr.add_relation_tuple(head=ent, tail=val)
         val.add_relation_as_tail(relation=attr, head=ent)
         self.attribute_tuple_list.append((ent, attr, val))
-        # self.__dict_set_insert_helper(self.rel_or_attr_dict_by_tuple, (ent, val), attr)
-        # self.__dict_set_insert_helper(self.ent_or_lite_head_dict_by_tuple, (val, attr), ent)
-        # self.__dict_set_insert_helper(self.ent_or_lite_tail_dict_by_tuple, (ent, attr), val)
-
-    # def get_rel_or_attr_set_by_tuple(self, tup: tuple):
-    #     return self.rel_or_attr_dict_by_tuple.get(tup, set())
-    #
-    # def get_ent_or_lite_head_set_by_tuple(self, tup: tuple):
-    #     return self.ent_or_lite_head_dict_by_tuple.get(tup, set())
-    #
-    # def get_ent_or_lite_tail_set_by_tuple(self, tup: tuple):
-    #     return self.ent_or_lite_tail_dict_by_tuple.get(tup, set())
+        if not self.fact_dict_by_head.__contains__(ent.id):
+            self.fact_dict_by_head[ent.id] = list()
+        if not self.fact_dict_by_tail.__contains__(val.id):
+            self.fact_dict_by_tail[val.id] = list()
+        self.fact_dict_by_head[ent.id].append((attr.id, val.id))
+        self.fact_dict_by_tail[val.id].append((attr.id, ent.id))
 
     def get_object_by_name(self, name: str):
         name = name.strip()
@@ -188,10 +197,12 @@ class KG:
             relation.calculate_functionality()
             self.relation_set_func_ranked.append(relation)
             self.relation_set_func_inv_ranked.append(relation)
+            self.functionality_dict[relation.id] = relation.functionality
         for attribute in self.attribute_set:
             attribute.calculate_functionality()
             self.attribute_set_func_ranked.append(attribute)
             self.attribute_set_func_inv_ranked.append(attribute)
+            self.functionality_dict[attribute.id] = attribute.functionality
         self.relation_set_func_ranked.sort(key=lambda x: x.functionality, reverse=True)
         self.relation_set_func_inv_ranked.sort(key=lambda x: x.functionality_inv, reverse=True)
         self.attribute_set_func_ranked.sort(key=lambda x: x.functionality, reverse=True)

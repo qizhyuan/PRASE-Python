@@ -1,27 +1,29 @@
-import time
 import gc
+import sys
+import os
+import time
 import random
-from queue import Queue
 from objects.KG import KG
-from objects.KGsUtil import KGsUtil
-from objects.Mapper import Mapper
+from model.PARIS import one_iteration_one_way
+import multiprocessing as mp
+
+sys.setrecursionlimit(1000000)
 
 
 class KGs:
-    def __init__(self, kg1: KG, kg2: KG, ent_candidate_num=1, rel_candidate_num=1, theta=0.1, iteration=3):
+    def __init__(self, kg1: KG, kg2: KG, theta=0.1, iteration=3, workers=4):
         self.kg_l = kg1
         self.kg_r = kg2
         self.theta = theta
-        self.ent_candidate_num = ent_candidate_num
-        self.rel_candidate_num = rel_candidate_num
         self.iteration = iteration
         self.delta = 0.01
         self.epsilon = 1.01
         self.const = 10.0
+        self.workers = workers
 
-        self.rel_ongoing_dict = dict()
-        self.rel_norm_dict = dict()
-        self.rel_align_dict = dict()
+        self.rel_ongoing_dict_l, self.rel_ongoing_dict_r = dict(), dict()
+        self.rel_norm_dict_l, self.rel_norm_dict_r = dict(), dict()
+        self.rel_align_dict_l, self.rel_align_dict_r = dict(), dict()
 
         self.sub_ent_match = None
         self.sup_ent_match = None
@@ -44,15 +46,17 @@ class KGs:
             if self.kg_r.literal_dict_by_value.__contains__(lite_l.value):
                 lite_r = self.kg_r.literal_dict_by_value[lite_l.value]
                 l_id, r_id = lite_l.id, lite_r.id
-                self.sub_ent_match[l_id], self.sup_ent_match[r_id] = lite_r, lite_l
+                self.sub_ent_match[l_id], self.sup_ent_match[r_id] = lite_r.id, lite_l.id
                 self.sub_ent_prob[l_id], self.sup_ent_prob[r_id] = 1.0, 1.0
 
     def __get_counterpart_and_prob(self, ent):
         source = ent.affiliation is self.kg_l
-        counterpart = self.sub_ent_match[ent.id] if source else self.sup_ent_match[ent.id]
-        if counterpart is None:
+        counterpart_id = self.sub_ent_match[ent.id] if source else self.sup_ent_match[ent.id]
+        if counterpart_id is None:
             return None, 0.0
         else:
+            counterpart = self.kg_r.entity_dict_by_id.get(counterpart_id) if source \
+                else self.kg_l.entity_dict_by_id.get(counterpart_id)
             return counterpart, self.sub_ent_prob[ent.id] if source else self.sup_ent_prob[ent.id]
 
     def __set_counterpart_and_prob(self, ent_l, ent_r, prob):
@@ -62,9 +66,9 @@ class KGs:
         if prob < curr_prob:
             return
         if source:
-            self.sub_ent_match[l_id], self.sub_ent_prob[l_id] = ent_r, prob
+            self.sub_ent_match[l_id], self.sub_ent_prob[l_id] = r_id, prob
         else:
-            self.sup_ent_match[l_id], self.sup_ent_prob[l_id] = ent_r, prob
+            self.sup_ent_match[l_id], self.sup_ent_prob[l_id] = r_id, prob
 
     def run(self, test_path=None):
         start_time = time.time()
@@ -77,6 +81,7 @@ class KGs:
                 print("Start testing...")
                 for j in range(10):
                     self.util.test(path=test_path, threshold=0.1 * float(j))
+            gc.collect()
         print("PARIS Completed!")
         end_time = time.time()
         print("Total time: " + str(end_time - start_time))
@@ -94,51 +99,83 @@ class KGs:
         self.util.load_params(path=path)
 
     def __run_per_iteration(self):
-        # print("Start one way...")
         self.__run_per_iteration_one_way(self.kg_l)
-        # print("Finish one way...")
-        gc.collect()
-        # print("Matching...")
         self.__ent_bipartite_matching()
-        # print("Start one way...")
         self.__run_per_iteration_one_way(self.kg_r, ent_align=False)
-        # print("Finish one way...")
-        gc.collect()
-        print("Complete an Iteration!")
         return
 
     def __run_per_iteration_one_way(self, kg: KG, ent_align=True):
-        # print("Generate queue...")
-        ent_queue = self.__generate_queue(kg)
-        # print("Mapper running...")
-        mapper = Mapper(queue=ent_queue, get_counterpart_and_prob=self.__get_counterpart_and_prob,
-                        set_counterpart_and_prob=self.__set_counterpart_and_prob, rel_align_dict=self.rel_align_dict,
-                        iter_num=self._iter_num, theta=self.theta, epsilon=self.epsilon, delta=self.delta,
-                        ent_align=ent_align)
-        mapper.run()
-        # thread.join()
-        self.rel_ongoing_dict.clear(), self.rel_norm_dict.clear()
-        # print("Mapper-INV running...")
-        rel_ongoing_dict, rel_norm_dict = mapper.get_rel_align_result()
-        self.__merge_rel_ongoing_dict(self.rel_ongoing_dict, rel_ongoing_dict, rel_norm_dict)
-        self.__merge_rel_norm_dict(self.rel_norm_dict, rel_norm_dict)
-        # print("Relation alignment updating...")
-        self.__update_rel_align_dict()
+        kg_other = self.kg_l if kg is self.kg_r else self.kg_r
+        ent_list = self.__generate_list(kg)
+        mgr = mp.Manager()
+        ent_queue = mgr.Queue(len(ent_list))
+        for ent_id in ent_list:
+            ent_queue.put(ent_id)
+
+        rel_ongoing_dict_queue = mgr.Queue()
+        rel_norm_dict_queue = mgr.Queue()
+        ent_match_tuple_queue = mgr.Queue()
+
+        kg_r_fact_dict_by_head = kg_other.fact_dict_by_head
+        kg_l_fact_dict_by_tail = kg.fact_dict_by_tail
+        kg_l_func, kg_r_func = kg.functionality_dict, kg_other.functionality_dict
+
+        rel_align_dict_l, rel_align_dict_r = self.rel_align_dict_l, self.rel_align_dict_r
+
+        if kg is self.kg_l:
+            ent_match, ent_prob = self.sub_ent_match, self.sub_ent_prob
+            is_literal_list_r = self.kg_r.is_literal_list
+        else:
+            ent_match, ent_prob = self.sup_ent_match, self.sup_ent_prob
+            rel_align_dict_l, rel_align_dict_r = rel_align_dict_r, rel_align_dict_l
+            is_literal_list_r = self.kg_l.is_literal_list
+
+        init = self._iter_num <= 1
+        tasks = []
+        for _ in range(self.workers):
+            task = mp.Process(target=one_iteration_one_way, args=(ent_queue, kg_r_fact_dict_by_head,
+                                                                  kg_l_fact_dict_by_tail,
+                                                                  kg_l_func, kg_r_func,
+                                                                  ent_match, ent_prob,
+                                                                  is_literal_list_r,
+                                                                  rel_align_dict_l, rel_align_dict_r,
+                                                                  rel_ongoing_dict_queue, rel_norm_dict_queue,
+                                                                  ent_match_tuple_queue,
+                                                                  self.theta, self.epsilon, self.delta, init,
+                                                                  ent_align))
+            task.start()
+            tasks.append(task)
+
+        for task in tasks:
+            task.join()
+
+        self.__clear_ent_match_and_prob(ent_match, ent_prob)
+        while not ent_match_tuple_queue.empty():
+            ent_match_tuple = ent_match_tuple_queue.get()
+            self.__merge_ent_align_result(ent_match, ent_prob, ent_match_tuple[0], ent_match_tuple[1])
+
+        rel_ongoing_dict = self.rel_ongoing_dict_l if kg is self.kg_l else self.rel_ongoing_dict_r
+        rel_norm_dict = self.rel_norm_dict_l if kg is self.kg_l else self.rel_norm_dict_r
+        rel_align_dict = self.rel_align_dict_l if kg is self.kg_l else self.rel_align_dict_r
+
+        rel_ongoing_dict.clear(), rel_norm_dict.clear(), rel_align_dict.clear()
+        while not rel_ongoing_dict_queue.empty():
+            self.__merge_rel_ongoing_dict(rel_ongoing_dict, rel_ongoing_dict_queue.get())
+
+        while not rel_norm_dict_queue.empty():
+            self.__merge_rel_norm_dict(rel_norm_dict, rel_norm_dict_queue.get())
+
+        self.__update_rel_align_dict(rel_align_dict, rel_ongoing_dict, rel_norm_dict)
 
     @staticmethod
-    def __generate_queue(kg: KG):
-        ent_queue = Queue(maxsize=len(kg.entity_set))
-        ent_list = list(kg.entity_set)
+    def __generate_list(kg: KG):
+        ent_list = kg.ent_id_list
         random.shuffle(ent_list)
-        for ent in ent_list:
-            ent_queue.put(ent)
-        return ent_queue
+        return ent_list
 
     @staticmethod
-    def __merge_rel_ongoing_dict(rel_dict_l, rel_dict_r, norm_dict_r):
+    def __merge_rel_ongoing_dict(rel_dict_l, rel_dict_r):
         for (rel, rel_counterpart_dict) in rel_dict_r.items():
-            if not norm_dict_r.__contains__(rel):
-                continue
             if not rel_dict_l.__contains__(rel):
                 rel_dict_l[rel] = rel_counterpart_dict
             else:
@@ -156,34 +193,197 @@ class KGs:
             else:
                 norm_dict_l[rel] += norm
 
-    def __update_rel_align_dict(self):
-        for (rel, counterpart_dict) in self.rel_ongoing_dict.items():
-            norm = self.rel_norm_dict.get(rel, 1.0)
-            if not self.rel_align_dict.__contains__(rel):
-                self.rel_align_dict[rel] = dict()
-            self.rel_align_dict[rel].clear()
+    @staticmethod
+    def __update_rel_align_dict(rel_align_dict, rel_ongoing_dict, rel_norm_dict, const=10.0):
+        for (rel, counterpart_dict) in rel_ongoing_dict.items():
+            norm = rel_norm_dict.get(rel, 1.0)
+            if not rel_align_dict.__contains__(rel):
+                rel_align_dict[rel] = dict()
+            rel_align_dict[rel].clear()
             for (counterpart, score) in counterpart_dict.items():
-                prob = score / (self.const + norm)
-                self.rel_align_dict[rel][counterpart] = prob
+                prob = score / (const + norm)
+                rel_align_dict[rel][counterpart] = prob
 
     def __ent_bipartite_matching(self):
         for ent_l in self.kg_l.entity_set:
             ent_id = ent_l.id
-            counterpart, prob = self.sub_ent_match[ent_id], self.sub_ent_prob[ent_id]
-            if counterpart is None:
+            counterpart_id, prob = self.sub_ent_match[ent_id], self.sub_ent_prob[ent_id]
+            if counterpart_id is None:
                 continue
-            counterpart_id = counterpart.id
             counterpart_prob = self.sup_ent_prob[counterpart_id]
             if counterpart_prob < prob:
-                self.sup_ent_match[counterpart_id] = ent_l
+                self.sup_ent_match[counterpart_id] = ent_id
                 self.sup_ent_prob[counterpart_id] = prob
         for ent_l in self.kg_l.entity_set:
             ent_id = ent_l.id
-            sub_counterpart = self.sub_ent_match[ent_id]
-            if sub_counterpart is None:
+            sub_counterpart_id = self.sub_ent_match[ent_id]
+            if sub_counterpart_id is None:
                 continue
-            sup_counterpart = self.sup_ent_match[sub_counterpart.id]
-            if sup_counterpart is None:
+            sup_counterpart_id = self.sup_ent_match[sub_counterpart_id]
+            if sup_counterpart_id is None:
                 continue
-            if sup_counterpart.id != ent_id:
+            if sup_counterpart_id != ent_id:
                 self.sub_ent_match[ent_id], self.sub_ent_prob[ent_id] = None, 0.0
+
+    @staticmethod
+    def __merge_ent_align_result(ent_match_l, ent_prob_l, ent_match_r, ent_prob_r):
+        assert len(ent_match_l) == len(ent_match_r)
+        for i in range(len(ent_prob_l)):
+            if ent_prob_l[i] < ent_prob_r[i]:
+                ent_prob_l[i] = ent_prob_r[i]
+                ent_match_l[i] = ent_match_r[i]
+
+    @staticmethod
+    def __clear_ent_match_and_prob(ent_match, ent_prob):
+        for i in range(len(ent_match)):
+            ent_match[i] = None
+            ent_prob[i] = 0.0
+
+
+class KGsUtil:
+    def __init__(self, kgs, get_counterpart_and_prob):
+        self.kgs = kgs
+        self.__get_counterpart_and_prob = get_counterpart_and_prob
+
+    def test(self, path, threshold):
+        correct_num, total_num = 0.0, 0.0
+        ent_align_result = set()
+        for ent_id in self.kgs.kg_l.ent_id_list:
+            counterpart_id = self.kgs.sub_ent_match[ent_id]
+            if counterpart_id is not None:
+                prob = self.kgs.sub_ent_prob[ent_id]
+                if prob < threshold:
+                    continue
+                ent_align_result.add((ent_id, counterpart_id))
+
+        if len(ent_align_result) == 0:
+            print("Threshold: " + format(threshold, ".3f") + "\tException: no satisfied alignment result")
+            return
+        with open(path, "r", encoding="utf8") as f:
+            for line in f.readlines():
+                params = str.strip(line).split("\t")
+                ent_l, ent_r = params[0].strip(), params[1].strip()
+                obj_l, obj_r = self.kgs.kg_l.entity_dict_by_name.get(ent_l), self.kgs.kg_r.entity_dict_by_name.get(ent_r)
+                if obj_l is None:
+                    print("Exception: fail to load Entity (" + ent_l + ")")
+                if obj_r is None:
+                    print("Exception: fail to load Entity (" + ent_r + ")")
+                if obj_l is None or obj_r is None:
+                    continue
+                if (obj_l.id, obj_r.id) in ent_align_result:
+                    correct_num += 1.0
+                total_num += 1.0
+
+        if total_num == 0.0:
+            print("Threshold: " + format(threshold, ".3f") + "\tException: no satisfied instance for testing")
+        else:
+            precision, recall = correct_num / len(ent_align_result), correct_num / total_num
+            print("Threshold: " + format(threshold, ".3f") + "\tPrecision: " + format(precision, ".6f") +
+                  "\tRecall: " + format(recall, ".6f"))
+
+    def save_results(self, path):
+        ent_dict, lite_dict, attr_dict, rel_dict = dict(), dict(), dict(), dict()
+        for obj in (self.kgs.kg_l.entity_set | self.kgs.kg_l.literal_set):
+            counterpart, prob = self.__get_counterpart_and_prob(obj)
+            if counterpart is not None:
+                if obj.is_literal():
+                    lite_dict[(obj, counterpart)] = [prob]
+                else:
+                    ent_dict[(obj, counterpart)] = [prob]
+
+        for (rel_id, rel_counterpart_id_dict) in self.kgs.rel_align_dict_l.items():
+            rel = self.kgs.kg_l.relation_dict_by_id.get(rel_id)
+            dictionary = attr_dict if rel.is_attribute() else rel_dict
+            for (rel_counterpart_id, prob) in rel_counterpart_id_dict.items():
+                if prob > self.kgs.theta:
+                    rel_counterpart = self.kgs.kg_r.relation_dict_by_id.get(rel_counterpart_id)
+                    dictionary[(rel, rel_counterpart)] = [prob, 0.0]
+
+        for (rel_id, rel_counterpart_id_dict) in self.kgs.rel_align_dict_r.items():
+            rel = self.kgs.kg_r.relation_dict_by_id.get(rel_id)
+            dictionary = attr_dict if rel.is_attribute() else rel_dict
+            for (rel_counterpart_id, prob) in rel_counterpart_id_dict.items():
+                if prob > self.kgs.theta:
+                    rel_counterpart = self.kgs.kg_l.relation_dict_by_id.get(rel_counterpart_id)
+                    if not dictionary.__contains__((rel_counterpart, rel)):
+                        dictionary[(rel_counterpart, rel)] = [0.0, 0.0]
+                    dictionary[(rel_counterpart, rel)][-1] = prob
+        base, _ = os.path.split(path)
+        if not os.path.exists(base):
+            os.makedirs(base)
+        if os.path.exists(path):
+            os.remove(path)
+        self.__result_writer(path, attr_dict, "Attribute Alignment")
+        self.__result_writer(path, rel_dict, "Relation Alignment")
+        self.__result_writer(path, lite_dict, "Literal Alignment")
+        self.__result_writer(path, ent_dict, "Entity Alignment")
+        return
+
+    def save_params(self, path):
+        base, _ = os.path.split(path)
+        if not os.path.exists(base):
+            os.makedirs(base)
+        with open(path, "w", encoding="utf-8") as f:
+            for obj in (self.kgs.kg_l.entity_set | self.kgs.kg_l.literal_set):
+                counterpart, prob = self.__get_counterpart_and_prob(obj)
+                if counterpart is not None:
+                    f.write("\t".join(["L", obj.name, counterpart.name, str(prob)]) + "\n")
+            for obj in (self.kgs.kg_r.entity_set | self.kgs.kg_r.literal_set):
+                counterpart, prob = self.__get_counterpart_and_prob(obj)
+                if counterpart is not None:
+                    f.write("\t".join(["R", obj.name, counterpart.name, str(prob)]) + "\n")
+            for (rel_id, rel_counterpart_id_dict) in self.kgs.rel_align_dict_l.items():
+                rel = self.kgs.kg_l.relation_dict_by_id.get(rel_id)
+                for (rel_counterpart_id, prob) in rel_counterpart_id_dict.items():
+                    if prob > 0.0:
+                        rel_counterpart = self.kgs.kg_r.relation_dict_by_id.get(rel_counterpart_id)
+                        prefix = "L"
+                        f.write("\t".join([prefix, rel.name, rel_counterpart.name, str(prob)]) + "\n")
+            for (rel_id, rel_counterpart_id_dict) in self.kgs.rel_align_dict_r.items():
+                rel = self.kgs.kg_r.relation_dict_by_id.get(rel_id)
+                for (rel_counterpart_id, prob) in rel_counterpart_id_dict.items():
+                    if prob > 0.0:
+                        rel_counterpart = self.kgs.kg_l.relation_dict_by_id.get(rel_counterpart_id)
+                        prefix = "R"
+                        f.write("\t".join([prefix, rel.name, rel_counterpart.name, str(prob)]) + "\n")
+        return
+
+    def load_params(self, path):
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f.readlines():
+                if len(line.strip()) == 0:
+                    continue
+                params = line.strip().split("\t")
+                assert len(params) == 4
+                prefix, name_l, name_r, prob = params[0].strip(), params[1].strip(), params[2].strip(), float(params[3].strip())
+                if prefix == "L":
+                    obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
+                else:
+                    obj_l, obj_r = self.kgs.kg_r.get_object_by_name(name_l), self.kgs.kg_l.get_object_by_name(name_r)
+                assert (obj_l is not None and obj_r is not None)
+                if obj_l.is_entity():
+                    idx_l = obj_l.id
+                    if prefix == "L":
+                        self.kgs.sub_ent_match[idx_l], self.kgs.sub_ent_prob[idx_l] = obj_r.id, prob
+                    else:
+                        self.kgs.sup_ent_match[idx_l], self.kgs.sup_ent_prob[idx_l] = obj_r.id, prob
+                else:
+                    if prefix == "L":
+                        self.__params_loader_helper(self.kgs.rel_align_dict_l, obj_l.id, obj_r.id, prob)
+                    else:
+                        self.__params_loader_helper(self.kgs.rel_align_dict_r, obj_l.id, obj_r.id, prob)
+        return
+
+    @staticmethod
+    def __result_writer(path, result_dict, title):
+        with open(path, "a+", encoding="utf-8") as f:
+            f.write("--- " + title + " ---\n\n")
+            for ((obj_l, obj_r), prob_set) in result_dict.items():
+                f.write(obj_l.name + "\t" + obj_r.name + "\t" + "\t".join(format(s, ".6f") for s in prob_set) + "\n")
+            f.write("\n")
+
+    @staticmethod
+    def __params_loader_helper(dict_by_key: dict, key1, key2, value):
+        if not dict_by_key.__contains__(key1):
+            dict_by_key[key1] = dict()
+        dict_by_key[key1][key2] = value
