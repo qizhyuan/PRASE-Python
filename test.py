@@ -109,10 +109,13 @@ def test(base, iteration=30):
     kg1 = construct_kg(path_r_1, path_a_1, name=str(name + "-KG1"))
     kg2 = construct_kg(path_r_2, path_a_2, name=str(name + "-KG2"))
     kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1)
-    kgs.run(test_path=path_validation)
-    # kgs.load_params(os.path.join(save_path, "EA_Params.txt"))
-    kgs.save_results(os.path.join(save_path, "EA_Result.txt"))
-    kgs.save_params(os.path.join(save_path, "EA_Params.txt"))
+    # kgs.run(test_path=path_validation)
+    kgs.load_params(os.path.join(save_path, "EA_Params.txt"))
+    kgs.load_ea_result(save_path)
+    kgs.test(path_validation, 0.1)
+    # kgs.generate_new_dataset(path_validation, save_path)
+    # kgs.save_results(os.path.join(save_path, "EA_Result.txt"))
+    # kgs.save_params(os.path.join(save_path, "EA_Params.txt"))
 
 
 parser = argparse.ArgumentParser(description="PARIS_PYTHON")

@@ -31,7 +31,7 @@ class KGs:
         self.sup_ent_prob = None
 
         self._iter_num = 0
-        self.util = KGsUtil(self, self.__get_counterpart_and_prob)
+        self.util = KGsUtil(self, self.__get_counterpart_and_prob, self.__set_counterpart_and_prob)
         self.__init()
 
     def __init(self):
@@ -97,6 +97,15 @@ class KGs:
 
     def load_params(self, path="output/PARIS_Params"):
         self.util.load_params(path=path)
+
+    def load_ea_result(self, path, init_value=0.3):
+        self.util.load_ea_result(path, init_value)
+
+    # def save_seeds(self, path="output/PARIS_Seeds", threshold=0.9):
+    #     self.util.save_seeds(path=path, threshold=threshold)
+
+    def generate_new_dataset(self, link_path, save_dir, threshold=0.1):
+        self.util.generate_new_dataset(link_path, save_dir, threshold)
 
     def __run_per_iteration(self):
         self.__run_per_iteration_one_way(self.kg_l)
@@ -241,9 +250,10 @@ class KGs:
 
 
 class KGsUtil:
-    def __init__(self, kgs, get_counterpart_and_prob):
+    def __init__(self, kgs, get_counterpart_and_prob, set_counterpart_and_prob):
         self.kgs = kgs
         self.__get_counterpart_and_prob = get_counterpart_and_prob
+        self.__set_counterpart_and_prob = set_counterpart_and_prob
 
     def test(self, path, threshold):
         correct_num, total_num = 0.0, 0.0
@@ -280,6 +290,43 @@ class KGsUtil:
             precision, recall = correct_num / len(ent_align_result), correct_num / total_num
             print("Threshold: " + format(threshold, ".3f") + "\tPrecision: " + format(precision, ".6f") +
                   "\tRecall: " + format(recall, ".6f"))
+
+    def generate_new_dataset(self, link_path, save_dir, threshold):
+        ent_align_predict = set()
+        for ent in self.kgs.kg_l.entity_set:
+            counterpart, prob = self.__get_counterpart_and_prob(ent)
+            if prob < threshold:
+                continue
+            ent_align_predict.add((ent, counterpart))
+
+        ent_align_test = set()
+        with open(link_path, "r", encoding="utf8") as f:
+            for line in f.readlines():
+                params = str.strip(line).split("\t")
+                ent_l, ent_r = params[0].strip(), params[1].strip()
+                obj_l, obj_r = self.kgs.kg_l.entity_dict_by_name.get(ent_l), self.kgs.kg_r.entity_dict_by_name.get(ent_r)
+                if obj_l is None or obj_r is None:
+                    continue
+                if (obj_l, obj_r) not in ent_align_predict:
+                    ent_align_test.add((obj_l, obj_r))
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        train_path = os.path.join(save_dir, "train_links")
+        test_path = os.path.join(save_dir, "test_links")
+        valid_path = os.path.join(save_dir, "valid_links")
+
+        def writer(save_path, result_set):
+            with open(save_path, "w", encoding="utf8") as f:
+                num, length = 0, len(result_set)
+                for (obj_l, obj_r) in result_set:
+                    f.write("\t".join([obj_l.name, obj_r.name]))
+                    num += 1
+                    if num < length:
+                        f.write("\n")
+
+        writer(train_path, ent_align_predict)
+        writer(test_path, ent_align_test)
+        writer(valid_path, ent_align_test)
 
     def save_results(self, path):
         ent_dict, lite_dict, attr_dict, rel_dict = dict(), dict(), dict(), dict()
@@ -373,6 +420,39 @@ class KGsUtil:
                     else:
                         self.__params_loader_helper(self.kgs.rel_align_dict_r, obj_l.id, obj_r.id, prob)
         return
+
+    def load_ea_result(self, path, init_value=0.3):
+        align_path = os.path.join(path, "ea_alignment_results")
+        kg1_ent_idx_path = os.path.join(path, "kg1_ent_ids")
+        kg2_ent_idx_path = os.path.join(path, "kg2_ent_ids")
+        kg_idx_dict = dict()
+
+        def generate_idx_dict(path, dictionary):
+            with open(path, "r", encoding="utf8") as f:
+                for line in f.readlines():
+                    line = line.strip()
+                    if len(line) == 0:
+                        continue
+                    params = line.split(sep="\t")
+                    name, idx = params[0].strip(), int(params[1].strip())
+                    dictionary[idx] = name
+
+        generate_idx_dict(kg1_ent_idx_path, kg_idx_dict)
+        generate_idx_dict(kg2_ent_idx_path, kg_idx_dict)
+
+        with open(align_path, "r", encoding="utf8") as f:
+            for line in f.readlines():
+                line = line.strip()
+                if len(line) == 0:
+                    continue
+                params = line.split(sep="\t")
+                idx_l, idx_r = 2 * int(params[0].strip()), 2 * int(params[1].strip()) + 1
+                name_l, name_r = kg_idx_dict.get(idx_l, None), kg_idx_dict.get(idx_r, None)
+                obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
+                if obj_l is None or obj_r is None:
+                    continue
+                self.__set_counterpart_and_prob(obj_l, obj_r, init_value)
+                self.__set_counterpart_and_prob(obj_r, obj_l, init_value)
 
     @staticmethod
     def __result_writer(path, result_dict, title):
