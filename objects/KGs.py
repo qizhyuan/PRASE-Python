@@ -101,6 +101,17 @@ class KGs:
     def load_ea_result(self, path, init_value=0.3):
         self.util.load_ea_result(path, init_value)
 
+    def load_ent_links(self, path, init_value=0.3, num=100):
+        self.util.load_ent_links(path, init_value, num=num)
+
+    def reset_ent_align_prob(self, func):
+        for ent in self.kg_l.entity_set:
+            idx = ent.id
+            self.sub_ent_prob[idx] = func(self.sub_ent_prob[idx])
+        for ent in self.kg_r.entity_set:
+            idx = ent.id
+            self.sup_ent_prob[idx] = func(self.sup_ent_prob[idx])
+
     # def save_seeds(self, path="output/PARIS_Seeds", threshold=0.9):
     #     self.util.save_seeds(path=path, threshold=threshold)
 
@@ -420,6 +431,24 @@ class KGsUtil:
                     else:
                         self.__params_loader_helper(self.kgs.rel_align_dict_r, obj_l.id, obj_r.id, prob)
         return
+
+    def load_ent_links(self, path, init_value=0.3, num=100):
+        idx = 0
+        with open(path, "r", encoding="utf8") as f:
+            for line in f.readlines():
+                line = line.strip()
+                if len(line) == 0:
+                    continue
+                params = line.split(sep="\t")
+                name_l, name_r = params[0].strip(), params[1].strip()
+                obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
+                if obj_l is None or obj_r is None:
+                    continue
+                self.__set_counterpart_and_prob(obj_l, obj_r, init_value)
+                self.__set_counterpart_and_prob(obj_r, obj_l, init_value)
+                idx += 1
+                if idx >= num:
+                    break
 
     def load_ea_result(self, path, init_value=0.3):
         align_path = os.path.join(path, "ea_alignment_results")
