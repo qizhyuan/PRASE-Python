@@ -82,9 +82,9 @@ class KGs:
                 for j in range(10):
                     self.util.test(path=test_path, threshold=0.1 * float(j))
             gc.collect()
-            self.reset_ent_align_prob(lambda x: 0.95 * x)
-            if i % 3 == 0:
-                self.util.set_random_candidate()
+            # self.reset_ent_align_prob(lambda x: 0.95 * x)
+            # if i % 2 == 0:
+            #     self.util.set_random_candidate()
         print("PARIS Completed!")
         end_time = time.time()
         print("Total time: " + str(end_time - start_time))
@@ -104,8 +104,8 @@ class KGs:
     def load_ea_result(self, path, init_value=0.3):
         self.util.load_ea_result(path, init_value)
 
-    def load_ent_links(self, path, init_value=0.3, num=100):
-        self.util.load_ent_links(path, init_value, num=num)
+    def load_ent_links(self, path, init_value=0.3, num=100, threshold=0.9):
+        self.util.load_ent_links(path, init_value, num=num, threshold=threshold)
 
     def load_multi_ent_links(self, init_value=0.3, *paths):
         self.util.load_multi_ent_links(init_value, *paths)
@@ -439,7 +439,7 @@ class KGsUtil:
                         self.__params_loader_helper(self.kgs.rel_align_dict_r, obj_l.id, obj_r.id, prob)
         return
 
-    def load_ent_links(self, path, init_value=0.3, num=100):
+    def load_ent_links(self, path, init_value=0.3, num=100, threshold=0.8, epsilon=5):
         idx = 0
         with open(path, "r", encoding="utf8") as f:
             for line in f.readlines():
@@ -447,15 +447,18 @@ class KGsUtil:
                 if len(line) == 0:
                     continue
                 params = line.split(sep="\t")
-                name_l, name_r = params[0].strip(), params[1].strip()
+                name_l, name_r, prob = params[0].strip(), params[1].strip(), float(params[2].strip())
+                if prob < threshold:
+                    continue
                 obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
                 if obj_l is None or obj_r is None:
                     continue
-                self.__set_counterpart_and_prob(obj_l, obj_r, init_value)
-                self.__set_counterpart_and_prob(obj_r, obj_l, init_value)
+                self.__set_counterpart_and_prob(obj_l, obj_r, prob / epsilon)
+                self.__set_counterpart_and_prob(obj_r, obj_l, prob / epsilon)
                 idx += 1
                 if idx >= num:
                     break
+        print("load num: " + str(idx))
 
     def load_multi_ent_links(self, init_value, *paths):
         ent_links_set = set()
@@ -468,7 +471,9 @@ class KGsUtil:
                     if len(line) == 0:
                         continue
                     params = line.split(sep="\t")
-                    name_l, name_r = params[0].strip(), params[1].strip()
+                    name_l, name_r, prob = params[0].strip(), params[1].strip(), float(params[2].strip())
+                    if prob < 0.6:
+                        continue
                     obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
                     if obj_l is None or obj_r is None:
                         continue
