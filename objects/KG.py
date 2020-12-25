@@ -1,4 +1,5 @@
 import re
+import numpy as np
 
 from objects.Entity import Entity
 from objects.Relation import Relation
@@ -44,6 +45,8 @@ class KG:
         self.fact_dict_by_head = dict()
         self.fact_dict_by_tail = dict()
         self.is_literal_list = list()
+
+        self.ent_embeddings = None
 
         self.__init()
 
@@ -207,6 +210,15 @@ class KG:
         self.relation_set_func_inv_ranked.sort(key=lambda x: x.functionality_inv, reverse=True)
         self.attribute_set_func_ranked.sort(key=lambda x: x.functionality, reverse=True)
         self.attribute_set_func_inv_ranked.sort(key=lambda x: x.functionality_inv, reverse=True)
+
+    def init_ent_embeddings(self):
+        for ent in self.entity_set:
+            idx, embedding = ent.id, ent.embedding
+            if embedding is None:
+                break
+            if self.ent_embeddings is None:
+                self.ent_embeddings = np.zeros((len(self.entity_set), len(embedding)))
+            self.ent_embeddings[idx, :] = embedding
 
     def print_kg_info(self):
         print("\nInformation of Knowledge Graph (" + str(self.name) + "):")

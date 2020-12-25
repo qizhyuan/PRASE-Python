@@ -3,6 +3,7 @@ import sys
 import os
 import time
 import random
+import numpy as np
 from objects.KG import KG
 from model.PARIS import one_iteration_one_way
 import multiprocessing as mp
@@ -31,6 +32,7 @@ class KGs:
         self.sup_ent_prob = None
 
         self._iter_num = 0
+        self.has_load = False
         self.util = KGsUtil(self, self.__get_counterpart_and_prob, self.__set_counterpart_and_prob)
         self.__init()
 
@@ -156,8 +158,9 @@ class KGs:
             rel_align_dict_l, rel_align_dict_r = rel_align_dict_r, rel_align_dict_l
             is_literal_list_r = self.kg_l.is_literal_list
 
-        init = self._iter_num <= 1
+        init = not self.has_load and self._iter_num <= 1
         tasks = []
+        kg_l_ent_embeds, kg_r_ent_embeds = kg.ent_embeddings, kg_other.ent_embeddings
         for _ in range(self.workers):
             task = mp.Process(target=one_iteration_one_way, args=(ent_queue, kg_r_fact_dict_by_head,
                                                                   kg_l_fact_dict_by_tail,
@@ -167,6 +170,7 @@ class KGs:
                                                                   rel_align_dict_l, rel_align_dict_r,
                                                                   rel_ongoing_dict_queue, rel_norm_dict_queue,
                                                                   ent_match_tuple_queue,
+                                                                  kg_l_ent_embeds, kg_r_ent_embeds,
                                                                   self.theta, self.epsilon, self.delta, init,
                                                                   ent_align))
             task.start()
@@ -414,6 +418,7 @@ class KGsUtil:
         return
 
     def load_params(self, path):
+        self.kgs.has_load = True
         with open(path, "r", encoding="utf-8") as f:
             for line in f.readlines():
                 if len(line.strip()) == 0:
@@ -439,7 +444,7 @@ class KGsUtil:
                         self.__params_loader_helper(self.kgs.rel_align_dict_r, obj_l.id, obj_r.id, prob)
         return
 
-    def load_ent_links(self, path, init_value=0.3, num=100, threshold=0.8, epsilon=1):
+    def load_ent_links(self, path, init_value=0.3, num=100, threshold=0.8, epsilon=5):
         idx = 0
         with open(path, "r", encoding="utf8") as f:
             for line in f.readlines():
@@ -449,13 +454,13 @@ class KGsUtil:
                 params = line.split(sep="\t")
                 if len(params) == 3:
                     name_l, name_r, prob = params[0].strip(), params[1].strip(), float(params[2].strip())
-                    if prob < 0.8:
+                    if prob < 0.8 or prob > 0.95:
                         continue
                     obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
                     if obj_l is None or obj_r is None:
                         continue
                     self.__set_counterpart_and_prob(obj_l, obj_r, prob / epsilon)
-                    self.__set_counterpart_and_prob(obj_r, obj_l, prob / epsilon)
+                    # self.__set_counterpart_and_prob(obj_r, obj_l, prob / epsilon)
                 elif len(params) == 2:
                     name_l, name_r = params[0].strip(), params[1].strip()
                     obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
@@ -541,6 +546,25 @@ class KGsUtil:
                     continue
                 self.__set_counterpart_and_prob(obj_l, obj_r, init_value)
                 self.__set_counterpart_and_prob(obj_r, obj_l, init_value)
+
+    def load_embedding(self, ent_emb_path, kg_l_mapping, kg_r_mapping):
+        ent_emb = np.load(ent_emb_path)
+
+        def load_emb_helper(kg, mapping_path):
+            with open(mapping_path, "r", encoding="utf8") as f:
+                for line in f.readlines():
+                    if len(line.strip()) == 0:
+                        continue
+                    params = line.strip().split("\t")
+                    ent_name, idx = params[0].strip(), int(params[1].strip())
+                    ent = kg.entity_dict_by_name.get(ent_name)
+                    if ent is not None:
+                        ent.embedding = ent_emb[idx, :]
+
+        load_emb_helper(self.kgs.kg_l, kg_l_mapping)
+        load_emb_helper(self.kgs.kg_r, kg_r_mapping)
+        self.kgs.kg_l.init_ent_embeddings()
+        self.kgs.kg_r.init_ent_embeddings()
 
     @staticmethod
     def __result_writer(path, result_dict, title):

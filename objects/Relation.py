@@ -18,6 +18,8 @@ class Relation:
 
         self.functionality = 0.0
         self.functionality_inv = 0.0
+
+        self.embedding = None
         self.__init()
 
     @staticmethod

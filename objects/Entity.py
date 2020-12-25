@@ -12,6 +12,8 @@ class Entity:
         self.involved_as_tail_dict = dict()
         self.involved_as_head_dict = dict()
 
+        self.embedding = None
+
         self.__init()
 
     @staticmethod
