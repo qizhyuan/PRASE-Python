@@ -135,3 +135,5 @@ dataset/
 alignment_result.txt
 
 output/
+notebook/
+notebook.ipynb

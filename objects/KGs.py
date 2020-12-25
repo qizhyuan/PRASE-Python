@@ -105,7 +105,7 @@ class KGs:
         self.util.load_ea_result(path, init_value)
 
     def load_ent_links(self, path, init_value=0.3, num=100, threshold=0.9):
-        self.util.load_ent_links(path, init_value, num=num, threshold=threshold)
+        self.util.load_ent_links(path=path, init_value=init_value, num=num, threshold=threshold)
 
     def load_multi_ent_links(self, init_value=0.3, *paths):
         self.util.load_multi_ent_links(init_value, *paths)
@@ -439,7 +439,7 @@ class KGsUtil:
                         self.__params_loader_helper(self.kgs.rel_align_dict_r, obj_l.id, obj_r.id, prob)
         return
 
-    def load_ent_links(self, path, init_value=0.3, num=100, threshold=0.8, epsilon=5):
+    def load_ent_links(self, path, init_value=0.3, num=100, threshold=0.8, epsilon=1):
         idx = 0
         with open(path, "r", encoding="utf8") as f:
             for line in f.readlines():
@@ -447,14 +447,24 @@ class KGsUtil:
                 if len(line) == 0:
                     continue
                 params = line.split(sep="\t")
-                name_l, name_r, prob = params[0].strip(), params[1].strip(), float(params[2].strip())
-                if prob < threshold:
+                if len(params) == 3:
+                    name_l, name_r, prob = params[0].strip(), params[1].strip(), float(params[2].strip())
+                    if prob < 0.8:
+                        continue
+                    obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
+                    if obj_l is None or obj_r is None:
+                        continue
+                    self.__set_counterpart_and_prob(obj_l, obj_r, prob / epsilon)
+                    self.__set_counterpart_and_prob(obj_r, obj_l, prob / epsilon)
+                elif len(params) == 2:
+                    name_l, name_r = params[0].strip(), params[1].strip()
+                    obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
+                    if obj_l is None or obj_r is None:
+                        continue
+                    self.__set_counterpart_and_prob(obj_l, obj_r, 1.0 / epsilon)
+                    self.__set_counterpart_and_prob(obj_r, obj_l, 1.0 / epsilon)
+                else:
                     continue
-                obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
-                if obj_l is None or obj_r is None:
-                    continue
-                self.__set_counterpart_and_prob(obj_l, obj_r, prob / epsilon)
-                self.__set_counterpart_and_prob(obj_r, obj_l, prob / epsilon)
                 idx += 1
                 if idx >= num:
                     break
