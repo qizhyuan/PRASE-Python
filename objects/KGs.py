@@ -12,7 +12,7 @@ sys.setrecursionlimit(1000000)
 
 
 class KGs:
-    def __init__(self, kg1: KG, kg2: KG, theta=0.1, iteration=3, workers=4):
+    def __init__(self, kg1: KG, kg2: KG, theta=0.1, iteration=3, workers=4, fusion_func=None):
         self.kg_l = kg1
         self.kg_r = kg2
         self.theta = theta
@@ -21,6 +21,7 @@ class KGs:
         self.epsilon = 1.01
         self.const = 10.0
         self.workers = workers
+        self.fusion_func = fusion_func
 
         self.rel_ongoing_dict_l, self.rel_ongoing_dict_r = dict(), dict()
         self.rel_norm_dict_l, self.rel_norm_dict_r = dict(), dict()
@@ -73,6 +74,9 @@ class KGs:
             self.sup_ent_match[l_id], self.sup_ent_prob[l_id] = r_id, prob
         return True
 
+    def set_fusion_func(self, func):
+        self.fusion_func = func
+
     def run(self, test_path=None):
         start_time = time.time()
         print("Start...")
@@ -85,9 +89,6 @@ class KGs:
                 for j in range(10):
                     self.util.test(path=test_path, threshold=0.1 * float(j))
             gc.collect()
-            # self.reset_ent_align_prob(lambda x: 0.95 * x)
-            # if i % 2 == 0:
-            #     self.util.set_random_candidate()
         print("PARIS Completed!")
         end_time = time.time()
         print("Total time: " + str(end_time - start_time))
@@ -137,6 +138,7 @@ class KGs:
                                                                   rel_ongoing_dict_queue, rel_norm_dict_queue,
                                                                   ent_match_tuple_queue,
                                                                   kg_l_ent_embeds, kg_r_ent_embeds,
+                                                                  self.fusion_func,
                                                                   self.theta, self.epsilon, self.delta, init,
                                                                   ent_align))
             task.start()
@@ -303,13 +305,13 @@ class KGsUtil:
         test_path = os.path.join(save_dir, "test_links")
 
         def writer(path, result_set):
-            with open(path, "w", encoding="utf8") as f:
+            with open(path, "w", encoding="utf8") as file:
                 num, length = 0, len(result_set)
                 for (l, r) in result_set:
-                    f.write("\t".join([l.name, r.name]))
+                    file.write("\t".join([l.name, r.name]))
                     num += 1
                     if num < length:
-                        f.write("\n")
+                        file.write("\n")
 
         writer(train_path, ent_align_predict)
         writer(test_path, ent_align_test)

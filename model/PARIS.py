@@ -1,6 +1,3 @@
-import numpy as np
-
-
 def get_counterpart_id_and_prob(ent_match, ent_prob, ent_id):
     counterpart = ent_match[ent_id]
     if counterpart is None:
@@ -41,15 +38,14 @@ def get_rel_align_prob(dictionary, rel_l, rel_r):
     return prob
 
 
-def update_ent_align_prob(ent_align_ongoing_dict, ent_match, ent_prob, kg_l_ent_embeds, kg_r_ent_embeds, ent):
+def update_ent_align_prob(ent_align_ongoing_dict, ent_match, ent_prob, kg_l_ent_embeds, kg_r_ent_embeds, ent, fusion_func):
     counterpart, value = None, 0.0
     for (candidate, prob) in ent_align_ongoing_dict.items():
         val = 1.0 - prob
-        if kg_l_ent_embeds is not None and kg_r_ent_embeds is not None:
+        if kg_l_ent_embeds is not None and kg_r_ent_embeds is not None and fusion_func is not None:
             ent_emb = kg_l_ent_embeds[ent, :]
             candidate_emb = kg_r_ent_embeds[candidate, :]
-            reg = np.dot(ent_emb, candidate_emb)
-            val = val * 0.7 + reg * 0.3
+            val = fusion_func(val, ent_emb, candidate_emb)
         if val >= value:
             value, counterpart = val, candidate
     if counterpart is None:
@@ -92,6 +88,7 @@ def one_iteration_one_way(queue, kg_r_fact_dict_by_head,
                           rel_ongoing_dict_queue, rel_norm_dict_queue,
                           ent_match_tuple_queue,
                           kg_l_ent_embeds, kg_r_ent_embeds,
+                          fusion_func,
                           theta, epsilon, delta, init=False, ent_align=True):
     rel_ongoing_dict, rel_norm_dict = dict(), dict()
     while not queue.empty():
@@ -123,7 +120,7 @@ def one_iteration_one_way(queue, kg_r_fact_dict_by_head,
                                           rel_id, rel_counterpart_id, tail_counterpart_id,
                                           head_eqv_prob, theta, epsilon, delta, init)
         if ent_align:
-            update_ent_align_prob(ent_align_ongoing_dict, sub_ent_match, sub_ent_prob, kg_l_ent_embeds, kg_r_ent_embeds, ent_id)
+            update_ent_align_prob(ent_align_ongoing_dict, sub_ent_match, sub_ent_prob, kg_l_ent_embeds, kg_r_ent_embeds, ent_id, fusion_func)
     rel_ongoing_dict_queue.put(rel_ongoing_dict), rel_norm_dict_queue.put(rel_norm_dict)
     ent_match_tuple_queue.put((sub_ent_match, sub_ent_prob))
     exit(1)

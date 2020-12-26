@@ -2,6 +2,7 @@ from objects.KG import KG
 from objects.KGs import KGs
 import os
 import argparse
+import numpy as np
 
 
 def construct_kg(path_r, path_a=None, sep='\t', name=None):
@@ -92,6 +93,9 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
 # kgs.save_results("output/FMA2NCI/EA_Result.txt")
 # kgs.save_params("output/FMA2NCI/EA_Params.txt")
 
+def fusion_func(prob, x, y):
+    return 0.8 * prob + 0.2 * np.dot(x, y)
+
 
 def test(base, iteration=30):
     new_base, name = os.path.split(base)
@@ -111,9 +115,8 @@ def test(base, iteration=30):
     kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1)
     # kgs.run(test_path=path_validation)
     kgs.util.load_params(os.path.join(save_path, "EA_Params.txt"))
-    # kgs.generate_new_dataset(path_validation, save_path, threshold=0.9)
-    # kgs.load_ea_result(save_path)
-    # bootea_links_path = os.path.join(save_path, "BootEA_EA_Result")
+    # kgs.util.generate_input_for_embed_align(link_path=path_validation, save_dir=save_path, threshold=0.9)
+    bootea_links_path = os.path.join(save_path, "BootEA_EA_Result")
     # bootea_links_path = os.path.join(save_path, "BootEA_GT_Result")
     # mtranse_links_path = os.path.join(save_path, "MTransE_EA_Result")
     # imuse_links_path = os.path.join(save_path, "IMUSE_EA_Result")
@@ -122,13 +125,13 @@ def test(base, iteration=30):
     ent_emb_path = os.path.join(save_path, "ent_embeds.npy")
     mapping_l, mapping_r = os.path.join(save_path, "kg1_ent_ids"), os.path.join(save_path, "kg2_ent_ids")
     kgs.util.load_embedding(ent_emb_path, mapping_l, mapping_r)
-    # kgs.load_ent_links(bootea_links_path, init_value=1.0, num=40000, threshold=0.90)
-    # kgs.load_multi_ent_links(0.5, bootea_links_path)
+
+    kgs.set_fusion_func(fusion_func)
+    kgs.util.load_ent_links(path=bootea_links_path, func=lambda x: x / 5.0, threshold_min=0.8, threshold_max=0.95)
     kgs.util.test(path_validation, 0.1)
     kgs.run(test_path=path_validation)
-    # kgs.generate_new_dataset(path_validation, save_path)
-    # kgs.save_results(os.path.join(save_path, "EA_Result.txt"))
-    # kgs.save_params(os.path.join(save_path, "EA_Params.txt"))
+    # kgs.util.save_results(os.path.join(save_path, "EA_Result.txt"))
+    # kgs.util.save_params(os.path.join(save_path, "EA_Params.txt"))
 
 
 parser = argparse.ArgumentParser(description="PARIS_PYTHON")
