@@ -278,8 +278,9 @@ class KGsUtil:
             print("Threshold: " + format(threshold, ".3f") + "\tException: no satisfied instance for testing")
         else:
             precision, recall = correct_num / len(ent_align_result), correct_num / total_num
+            f1_score = 2.0 * precision * recall / (precision + recall)
             print("Threshold: " + format(threshold, ".3f") + "\tPrecision: " + format(precision, ".6f") +
-                  "\tRecall: " + format(recall, ".6f"))
+                  "\tRecall: " + format(recall, ".6f") + "\tF1-Score: " + format(f1_score, ".6f"))
 
     def generate_input_for_embed_align(self, link_path, save_dir="output", threshold=0.0):
         ent_align_predict = set()
