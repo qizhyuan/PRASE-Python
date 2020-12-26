@@ -61,16 +61,17 @@ class KGs:
                 else self.kg_l.entity_dict_by_id.get(counterpart_id)
             return counterpart, self.sub_ent_prob[ent.id] if source else self.sup_ent_prob[ent.id]
 
-    def __set_counterpart_and_prob(self, ent_l, ent_r, prob):
+    def __set_counterpart_and_prob(self, ent_l, ent_r, prob, force=False):
         source = ent_l.affiliation is self.kg_l
         l_id, r_id = ent_l.id, ent_r.id
         curr_prob = self.sub_ent_prob[l_id] if source else self.sup_ent_prob[l_id]
-        if prob < curr_prob:
-            return
+        if not force and prob < curr_prob:
+            return False
         if source:
             self.sub_ent_match[l_id], self.sub_ent_prob[l_id] = r_id, prob
         else:
             self.sup_ent_match[l_id], self.sup_ent_prob[l_id] = r_id, prob
+        return True
 
     def run(self, test_path=None):
         start_time = time.time()
@@ -90,41 +91,6 @@ class KGs:
         print("PARIS Completed!")
         end_time = time.time()
         print("Total time: " + str(end_time - start_time))
-
-    def test(self, path, threshold=0.0):
-        self.util.test(path=path, threshold=threshold)
-
-    def save_results(self, path="output/EA_Result.txt"):
-        self.util.save_results(path=path)
-
-    def save_params(self, path="output/PARIS_Params"):
-        self.util.save_params(path=path)
-
-    def load_params(self, path="output/PARIS_Params"):
-        self.util.load_params(path=path)
-
-    def load_ea_result(self, path, init_value=0.3):
-        self.util.load_ea_result(path, init_value)
-
-    def load_ent_links(self, path, init_value=0.3, num=100, threshold=0.9):
-        self.util.load_ent_links(path=path, init_value=init_value, num=num, threshold=threshold)
-
-    def load_multi_ent_links(self, init_value=0.3, *paths):
-        self.util.load_multi_ent_links(init_value, *paths)
-
-    def reset_ent_align_prob(self, func):
-        for ent in self.kg_l.entity_set:
-            idx = ent.id
-            self.sub_ent_prob[idx] = func(self.sub_ent_prob[idx])
-        for ent in self.kg_r.entity_set:
-            idx = ent.id
-            self.sup_ent_prob[idx] = func(self.sup_ent_prob[idx])
-
-    # def save_seeds(self, path="output/PARIS_Seeds", threshold=0.9):
-    #     self.util.save_seeds(path=path, threshold=threshold)
-
-    def generate_new_dataset(self, link_path, save_dir, threshold=0.1):
-        self.util.generate_new_dataset(link_path, save_dir, threshold)
 
     def __run_per_iteration(self):
         self.__run_per_iteration_one_way(self.kg_l)
@@ -313,11 +279,11 @@ class KGsUtil:
             print("Threshold: " + format(threshold, ".3f") + "\tPrecision: " + format(precision, ".6f") +
                   "\tRecall: " + format(recall, ".6f"))
 
-    def generate_new_dataset(self, link_path, save_dir, threshold):
+    def generate_input_for_embed_align(self, link_path, save_dir="output", threshold=0.0):
         ent_align_predict = set()
         for ent in self.kgs.kg_l.entity_set:
             counterpart, prob = self.__get_counterpart_and_prob(ent)
-            if prob < threshold:
+            if prob < threshold or counterpart is None:
                 continue
             ent_align_predict.add((ent, counterpart))
 
@@ -335,22 +301,20 @@ class KGsUtil:
             os.makedirs(save_dir)
         train_path = os.path.join(save_dir, "train_links")
         test_path = os.path.join(save_dir, "test_links")
-        valid_path = os.path.join(save_dir, "valid_links")
 
-        def writer(save_path, result_set):
-            with open(save_path, "w", encoding="utf8") as f:
+        def writer(path, result_set):
+            with open(path, "w", encoding="utf8") as f:
                 num, length = 0, len(result_set)
-                for (obj_l, obj_r) in result_set:
-                    f.write("\t".join([obj_l.name, obj_r.name]))
+                for (l, r) in result_set:
+                    f.write("\t".join([l.name, r.name]))
                     num += 1
                     if num < length:
                         f.write("\n")
 
         writer(train_path, ent_align_predict)
         writer(test_path, ent_align_test)
-        writer(valid_path, ent_align_test)
 
-    def save_results(self, path):
+    def save_results(self, path="output/EA_Result.txt"):
         ent_dict, lite_dict, attr_dict, rel_dict = dict(), dict(), dict(), dict()
         for obj in (self.kgs.kg_l.entity_set | self.kgs.kg_l.literal_set):
             counterpart, prob = self.__get_counterpart_and_prob(obj)
@@ -388,7 +352,7 @@ class KGsUtil:
         self.__result_writer(path, ent_dict, "Entity Alignment")
         return
 
-    def save_params(self, path):
+    def save_params(self, path="output/EA_Params"):
         base, _ = os.path.split(path)
         if not os.path.exists(base):
             os.makedirs(base)
@@ -417,8 +381,8 @@ class KGsUtil:
                         f.write("\t".join([prefix, rel.name, rel_counterpart.name, str(prob)]) + "\n")
         return
 
-    def load_params(self, path):
-        self.kgs.has_load = True
+    def load_params(self, path="output/EA_Params", init=True):
+        self.kgs.has_load = init
         with open(path, "r", encoding="utf-8") as f:
             for line in f.readlines():
                 if len(line.strip()) == 0:
@@ -444,108 +408,45 @@ class KGsUtil:
                         self.__params_loader_helper(self.kgs.rel_align_dict_r, obj_l.id, obj_r.id, prob)
         return
 
-    def load_ent_links(self, path, init_value=0.3, num=100, threshold=0.8, epsilon=5):
-        idx = 0
+    def load_ent_links(self, path, func=None, num=None, init_value=None, threshold_min=0.0, threshold_max=1.0, force=False):
+        ent_link_list = list()
         with open(path, "r", encoding="utf8") as f:
             for line in f.readlines():
                 line = line.strip()
                 if len(line) == 0:
                     continue
                 params = line.split(sep="\t")
-                if len(params) == 3:
-                    name_l, name_r, prob = params[0].strip(), params[1].strip(), float(params[2].strip())
-                    if prob < 0.8 or prob > 0.95:
-                        continue
-                    obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
-                    if obj_l is None or obj_r is None:
-                        continue
-                    self.__set_counterpart_and_prob(obj_l, obj_r, prob / epsilon)
-                    # self.__set_counterpart_and_prob(obj_r, obj_l, prob / epsilon)
-                elif len(params) == 2:
-                    name_l, name_r = params[0].strip(), params[1].strip()
-                    obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
-                    if obj_l is None or obj_r is None:
-                        continue
-                    self.__set_counterpart_and_prob(obj_l, obj_r, 1.0 / epsilon)
-                    self.__set_counterpart_and_prob(obj_r, obj_l, 1.0 / epsilon)
-                else:
-                    continue
-                idx += 1
-                if idx >= num:
-                    break
-        print("load num: " + str(idx))
-
-    def load_multi_ent_links(self, init_value, *paths):
-        ent_links_set = set()
-
-        def get_ent_links_set(path):
-            ent_link_set_tmp = set()
-            with open(path, "r", encoding="utf8") as f:
-                for line in f.readlines():
-                    line = line.strip()
-                    if len(line) == 0:
-                        continue
-                    params = line.split(sep="\t")
-                    name_l, name_r, prob = params[0].strip(), params[1].strip(), float(params[2].strip())
-                    if prob < 0.6:
-                        continue
-                    obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
-                    if obj_l is None or obj_r is None:
-                        continue
-                    ent_link_set_tmp.add((obj_l, obj_r))
-            return ent_link_set_tmp
-
-        ent_links_set_list = []
-        for path in paths:
-            ent_links_set_list.append(get_ent_links_set(path))
-            ent_links_set |= ent_links_set_list[-1]
-        for ent_links_set_item in ent_links_set_list:
-            ent_links_set = ent_links_set & ent_links_set_item
-
-        print(len(ent_links_set))
-        for (obj_l, obj_r) in ent_links_set:
-            self.ent_links_candidate.append((obj_l, obj_r))
-            # self.__set_counterpart_and_prob(obj_l, obj_r, init_value)
-            # self.__set_counterpart_and_prob(obj_r, obj_l, init_value)
-
-    def set_random_candidate(self, num=500, init_value=0.2):
-        random_list = random.choices(self.ent_links_candidate, k=num)
-        for (obj_l, obj_r) in random_list:
-            self.__set_counterpart_and_prob(obj_l, obj_r, init_value)
-            self.__set_counterpart_and_prob(obj_r, obj_l, init_value)
-
-    def load_ea_result(self, path, init_value=0.3):
-        align_path = os.path.join(path, "ea_alignment_results")
-        kg1_ent_idx_path = os.path.join(path, "kg1_ent_ids")
-        kg2_ent_idx_path = os.path.join(path, "kg2_ent_ids")
-        kg_idx_dict = dict()
-
-        def generate_idx_dict(path, dictionary):
-            with open(path, "r", encoding="utf8") as f:
-                for line in f.readlines():
-                    line = line.strip()
-                    if len(line) == 0:
-                        continue
-                    params = line.split(sep="\t")
-                    name, idx = params[0].strip(), int(params[1].strip())
-                    dictionary[idx] = name
-
-        generate_idx_dict(kg1_ent_idx_path, kg_idx_dict)
-        generate_idx_dict(kg2_ent_idx_path, kg_idx_dict)
-
-        with open(align_path, "r", encoding="utf8") as f:
-            for line in f.readlines():
-                line = line.strip()
-                if len(line) == 0:
-                    continue
-                params = line.split(sep="\t")
-                idx_l, idx_r = 2 * int(params[0].strip()), 2 * int(params[1].strip()) + 1
-                name_l, name_r = kg_idx_dict.get(idx_l, None), kg_idx_dict.get(idx_r, None)
+                name_l, name_r = params[0].strip(), params[1].strip()
                 obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
                 if obj_l is None or obj_r is None:
                     continue
-                self.__set_counterpart_and_prob(obj_l, obj_r, init_value)
-                self.__set_counterpart_and_prob(obj_r, obj_l, init_value)
+                if init_value is None:
+                    if len(params) == 3:
+                        prob = float(params[2].strip())
+                    else:
+                        prob = 1.0
+                else:
+                    prob = init_value
+                if prob < threshold_min or prob > threshold_max:
+                    continue
+                if func is not None:
+                    prob = func(prob)
+                ent_link_list.append((obj_l, obj_r, prob))
+        random_list = random.choices(ent_link_list, k=num) if num is not None else ent_link_list
+        change_num = 0
+        for (obj_l, obj_r, prob) in random_list:
+            success = self.__set_counterpart_and_prob(obj_l, obj_r, prob, force)
+            success &= self.__set_counterpart_and_prob(obj_r, obj_l, prob, force)
+            change_num += 1 if success else 0
+        print("load num: " + str(len(random_list)) + "\t change num: " + str(change_num))
+
+    def reset_ent_align_prob(self, func):
+        for ent in self.kgs.kg_l.entity_set:
+            idx = ent.id
+            self.kgs.sub_ent_prob[idx] = func(self.kgs.sub_ent_prob[idx])
+        for ent in self.kgs.kg_r.entity_set:
+            idx = ent.id
+            self.kgs.sup_ent_prob[idx] = func(self.kgs.sup_ent_prob[idx])
 
     def load_embedding(self, ent_emb_path, kg_l_mapping, kg_r_mapping):
         ent_emb = np.load(ent_emb_path)
