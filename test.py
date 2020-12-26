@@ -94,7 +94,7 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
 # kgs.save_params("output/FMA2NCI/EA_Params.txt")
 
 def fusion_func(prob, x, y):
-    return 0.8 * prob + 0.2 * np.dot(x, y)
+    return 0.5 * prob + 0.5 * np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 
 def test(base, iteration=30):
@@ -112,13 +112,13 @@ def test(base, iteration=30):
     path_validation = os.path.join(base, "ent_links")
     kg1 = construct_kg(path_r_1, path_a_1, name=str(name + "-KG1"))
     kg2 = construct_kg(path_r_2, path_a_2, name=str(name + "-KG2"))
-    kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1)
+    kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1, workers=6)
     # kgs.run(test_path=path_validation)
     kgs.util.load_params(os.path.join(save_path, "EA_Params.txt"))
     # kgs.util.generate_input_for_embed_align(link_path=path_validation, save_dir=save_path, threshold=0.9)
-    bootea_links_path = os.path.join(save_path, "BootEA_EA_Result")
+    # bootea_links_path = os.path.join(save_path, "BootEA_EA_Result")
     # bootea_links_path = os.path.join(save_path, "BootEA_GT_Result")
-    # mtranse_links_path = os.path.join(save_path, "MTransE_EA_Result")
+    mtranse_links_path = os.path.join(save_path, "MTransE_EA_Result")
     # imuse_links_path = os.path.join(save_path, "IMUSE_EA_Result")
     # ent_links_path = os.path.join(save_path, "valid_links")
     kgs.util.reset_ent_align_prob(lambda x: 0.9 * x)
@@ -127,7 +127,7 @@ def test(base, iteration=30):
     kgs.util.load_embedding(ent_emb_path, mapping_l, mapping_r)
 
     kgs.set_fusion_func(fusion_func)
-    kgs.util.load_ent_links(path=bootea_links_path, func=lambda x: x / 5.0, threshold_min=0.8, threshold_max=0.95)
+    kgs.util.load_ent_links(path=mtranse_links_path, func=lambda x: x / 2.0, threshold_min=0.2, threshold_max=1.0, force=True)
     kgs.util.test(path_validation, 0.1)
     kgs.run(test_path=path_validation)
     # kgs.util.save_results(os.path.join(save_path, "EA_Result.txt"))
@@ -142,5 +142,5 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     # test(args.input, args.iteration)
-    # test("dataset/D_W_15K_V2", 10)
-    test("dataset/industry", 10)
+    test("dataset/D_W_100K_V2", 10)
+    # test("dataset/industry", 10)

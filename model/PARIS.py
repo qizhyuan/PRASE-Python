@@ -48,10 +48,9 @@ def update_ent_align_prob(ent_align_ongoing_dict, ent_match, ent_prob, kg_l_ent_
             val = fusion_func(val, ent_emb, candidate_emb)
         if val >= value:
             value, counterpart = val, candidate
-    if counterpart is None:
-        return
-    else:
-        set_counterpart_id_and_prob(ent_match, ent_prob, ent, counterpart, value)
+    value = 1.0 if value > 1.0 else value
+    value = 0.0 if value < 0.0 else value
+    set_counterpart_id_and_prob(ent_match, ent_prob, ent, counterpart, value)
 
 
 def register_ent_equality(ent_align_ongoing_dict, rel_align_dict_l, rel_align_dict_r,
