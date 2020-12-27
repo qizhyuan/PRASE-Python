@@ -60,7 +60,7 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
                 else:
                     kg.insert_attribute_tuple(e, a, v)
     kg.calculate_functionality()
-    # kg.print_kg_info()
+    kg.print_kg_info()
     return kg
 
 
@@ -94,10 +94,10 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
 # kgs.save_params("output/FMA2NCI/EA_Params.txt")
 
 def fusion_func(prob, x, y):
-    return 0.5 * prob + 0.5 * np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
+    return 0.8 * prob + 0.2 * np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 
-def test(base, iteration=30):
+def test(base, iteration=30, load_weight=1.0, load_ent=False, load_emb=False):
     new_base, name = os.path.split(base)
     save_path = os.path.join(os.path.join("output", name))
     if not os.path.exists(save_path):
@@ -122,8 +122,21 @@ def test(base, iteration=30):
     # bootea_links_path = os.path.join(save_path, "BootEA_GT_Result")
     # mtranse_links_path = os.path.join(save_path, "MTransE_EA_Result")
     # imuse_links_path = os.path.join(save_path, "IMUSE_EA_Result")
-    # ent_links_path = os.path.join(save_path, "MTransE/alignment_results_12")
     # ent_links_path = os.path.join(save_path, "test_links")
+    kgs.util.test(path_validation, 0.0)
+    kgs.util.test(path_validation, 0.1)
+
+    if load_ent is True:
+        ent_links_path = os.path.join(save_path, "MTransE/alignment_results_12")
+        kgs.util.load_ent_links(func=lambda x: load_weight * x, path=ent_links_path, force=True)
+
+    if load_emb is True:
+        base_path = os.path.join(save_path, "MTransE")
+        mapping_l, mapping_r = os.path.join(base_path, "kg1_ent_ids"), os.path.join(base_path, "kg2_ent_ids")
+        ent_emb_path = os.path.join(base_path, "ent_embeds.npy")
+        kgs.util.load_embedding(ent_emb_path, mapping_l, mapping_r)
+        print("load embedding...")
+        kgs.set_fusion_func(fusion_func)
 
     # kgs.util.reset_ent_align_prob(lambda x: 0.9 * x)
     # ent_emb_path = os.path.join(save_path, "ent_embeds.npy")
@@ -132,9 +145,8 @@ def test(base, iteration=30):
     #
     # kgs.set_fusion_func(fusion_func)
     # kgs.util.load_ent_links(func=lambda x: 0.5 * x, path=ent_links_path, force=True)
-    kgs.util.test(path_validation, 0.0)
-    kgs.util.test(path_validation, 0.1)
-    # kgs.run(test_path=path_validation)
+
+    kgs.run(test_path=path_validation)
     # kgs.util.save_results(os.path.join(save_path, "EA_Result.txt"))
     # kgs.util.save_params(os.path.join(save_path, "EA_Params.txt"))
 
@@ -147,11 +159,37 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     # test(args.input, args.iteration)
-    test("dataset/D_W_15K_V2", 10)
-    test("dataset/industry", 10)
-    test("dataset/D_Y_100K_V2", 10)
-    # test("dataset/D_Y_100K_V2", 10)
-    test("dataset/EN_DE_100K_V2", 10)
-    test("dataset/EN_FR_100K_V2", 10)
-    test("dataset/D_W_100K_V2", 10)
+    test("dataset/D_W_15K_V2", iteration=10, load_weight=1.0, load_ent=False, load_emb=True)
+    test("dataset/D_W_15K_V2", iteration=10, load_weight=1.0, load_ent=True, load_emb=True)
+    test("dataset/D_W_15K_V2", iteration=10, load_weight=0.5, load_ent=True, load_emb=True)
+
+    test("dataset/industry", iteration=10, load_weight=1.0, load_ent=False, load_emb=True)
+    test("dataset/industry", iteration=10, load_weight=1.0, load_ent=True, load_emb=True)
+    test("dataset/industry", iteration=10, load_weight=0.5, load_ent=True, load_emb=True)
+
+    test("dataset/EN_DE_100K_V2", iteration=10, load_weight=1.0, load_ent=False, load_emb=True)
+    test("dataset/EN_DE_100K_V2", iteration=10, load_weight=1.0, load_ent=True, load_emb=True)
+    test("dataset/EN_DE_100K_V2", iteration=10, load_weight=0.5, load_ent=True, load_emb=True)
+
+    test("dataset/EN_FR_100K_V2", iteration=10, load_weight=1.0, load_ent=False, load_emb=True)
+    test("dataset/EN_FR_100K_V2", iteration=10, load_weight=1.0, load_ent=True, load_emb=True)
+    test("dataset/EN_FR_100K_V2", iteration=10, load_weight=0.5, load_ent=True, load_emb=True)
+
+    test("dataset/D_W_100K_V2", iteration=10, load_weight=1.0, load_ent=False, load_emb=True)
+    test("dataset/D_W_100K_V2", iteration=10, load_weight=1.0, load_ent=True, load_emb=True)
+    test("dataset/D_W_100K_V2", iteration=10, load_weight=0.5, load_ent=True, load_emb=True)
+
+    test("dataset/D_Y_100K_V2", iteration=10, load_weight=1.0, load_ent=False, load_emb=True)
+    test("dataset/D_Y_100K_V2", iteration=10, load_weight=1.0, load_ent=True, load_emb=True)
+    test("dataset/D_Y_100K_V2", iteration=10, load_weight=0.5, load_ent=True, load_emb=True)
+    test("dataset/D_Y_100K_V2", iteration=10, load_weight=1.0, load_ent=True, load_emb=False)
+    test("dataset/D_Y_100K_V2", iteration=10, load_weight=0.5, load_ent=True, load_emb=False)
+
+
     # test("dataset/industry", 10)
+    # # test("dataset/D_Y_100K_V2", 10)
+    # test("dataset/EN_DE_100K_V2", 10)
+    # test("dataset/EN_FR_100K_V2", 10)
+    # test("dataset/D_W_100K_V2", 10)
+    # test("dataset/D_Y_100K_V2", 10)
+    # # test("dataset/industry", 10)
