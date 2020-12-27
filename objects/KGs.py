@@ -363,7 +363,7 @@ class KGsUtil:
         base, _ = os.path.split(path)
         if not os.path.exists(base):
             os.makedirs(base)
-        with open(path, "w", encoding="utf-8") as f:
+        with open(path, "w", encoding="utf8") as f:
             for obj in (self.kgs.kg_l.entity_set | self.kgs.kg_l.literal_set):
                 counterpart, prob = self.__get_counterpart_and_prob(obj)
                 if counterpart is not None:
@@ -390,7 +390,20 @@ class KGsUtil:
 
     def load_params(self, path="output/EA_Params", init=True):
         self.kgs.has_load = init
-        with open(path, "r", encoding="utf-8") as f:
+
+        def get_obj_by_name(kg_l, kg_r, name_l, name_r):
+            obj_l, obj_r = kg_l.literal_dict_by_name.get(name_l), kg_r.literal_dict_by_name.get(name_r)
+            if obj_l is None or obj_r is None:
+                obj_l, obj_r = kg_l.entity_dict_by_name.get(name_l), kg_r.entity_dict_by_name.get(name_r)
+            if obj_l is None or obj_r is None:
+                obj_l, obj_r = kg_l.entity_dict_by_name.get(name_l), kg_r.entity_dict_by_name.get(name_r)
+            if obj_l is None or obj_r is None:
+                obj_l, obj_r = kg_l.relation_dict_by_name.get(name_l), kg_r.relation_dict_by_name.get(name_r)
+            if obj_l is None or obj_r is None:
+                obj_l, obj_r = kg_l.attribute_dict_by_name.get(name_l), kg_r.attribute_dict_by_name.get(name_r)
+            return obj_l, obj_r
+
+        with open(path, "r", encoding="utf8") as f:
             for line in f.readlines():
                 if len(line.strip()) == 0:
                     continue
@@ -398,9 +411,9 @@ class KGsUtil:
                 assert len(params) == 4
                 prefix, name_l, name_r, prob = params[0].strip(), params[1].strip(), params[2].strip(), float(params[3].strip())
                 if prefix == "L":
-                    obj_l, obj_r = self.kgs.kg_l.get_object_by_name(name_l), self.kgs.kg_r.get_object_by_name(name_r)
+                    obj_l, obj_r = get_obj_by_name(self.kgs.kg_l, self.kgs.kg_r, name_l, name_r)
                 else:
-                    obj_l, obj_r = self.kgs.kg_r.get_object_by_name(name_l), self.kgs.kg_l.get_object_by_name(name_r)
+                    obj_l, obj_r = get_obj_by_name(self.kgs.kg_r, self.kgs.kg_l, name_l, name_r)
                 assert (obj_l is not None and obj_r is not None)
                 if obj_l.is_entity():
                     idx_l = obj_l.id
