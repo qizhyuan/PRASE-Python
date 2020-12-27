@@ -283,12 +283,13 @@ class KGsUtil:
                   "\tRecall: " + format(recall, ".6f") + "\tF1-Score: " + format(f1_score, ".6f"))
 
     def generate_input_for_embed_align(self, link_path, save_dir="output", threshold=0.0):
-        ent_align_predict = set()
+        ent_align_predict, visited = set(), set()
         for ent in self.kgs.kg_l.entity_set:
             counterpart, prob = self.__get_counterpart_and_prob(ent)
             if prob < threshold or counterpart is None:
                 continue
             ent_align_predict.add((ent, counterpart))
+            visited.add(ent)
 
         ent_align_test = set()
         with open(link_path, "r", encoding="utf8") as f:
@@ -298,12 +299,13 @@ class KGsUtil:
                 obj_l, obj_r = self.kgs.kg_l.entity_dict_by_name.get(ent_l), self.kgs.kg_r.entity_dict_by_name.get(ent_r)
                 if obj_l is None or obj_r is None:
                     continue
-                if (obj_l, obj_r) not in ent_align_predict:
+                if obj_l not in visited:
                     ent_align_test.add((obj_l, obj_r))
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         train_path = os.path.join(save_dir, "train_links")
         test_path = os.path.join(save_dir, "test_links")
+        valid_path = os.path.join(save_dir, "valid_links")
 
         def writer(path, result_set):
             with open(path, "w", encoding="utf8") as file:
@@ -316,6 +318,8 @@ class KGsUtil:
 
         writer(train_path, ent_align_predict)
         writer(test_path, ent_align_test)
+        writer(valid_path, ent_align_test)
+        print("training size: " + str(len(ent_align_predict)) + "\ttest size: " + str(len(ent_align_test)))
 
     def save_results(self, path="output/EA_Result.txt"):
         ent_dict, lite_dict, attr_dict, rel_dict = dict(), dict(), dict(), dict()

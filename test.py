@@ -60,7 +60,7 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
                 else:
                     kg.insert_attribute_tuple(e, a, v)
     kg.calculate_functionality()
-    kg.print_kg_info()
+    # kg.print_kg_info()
     return kg
 
 
@@ -115,7 +115,7 @@ def test(base, iteration=30):
     kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1, workers=6)
     # kgs.run(test_path=path_validation)
     kgs.util.load_params(os.path.join(save_path, "EA_Params.txt"))
-    # kgs.util.generate_input_for_embed_align(link_path=path_validation, save_dir=save_path, threshold=0.9)
+    # kgs.util.generate_input_for_embed_align(link_path=path_validation, save_dir=save_path, threshold=0.1)
 
     # bootea_links_path = os.path.join(save_path, "BootEA_EA_Result")
     # bootea_links_path = os.path.join(save_path, "BootEA_GT_Result")
@@ -130,7 +130,7 @@ def test(base, iteration=30):
     #
     # kgs.set_fusion_func(fusion_func)
     kgs.util.load_ent_links(path=ent_links_path, num=1000, force=True)
-    # kgs.util.test(path_validation, 0.1)
+    kgs.util.test(path_validation, 0.0)
     kgs.run(test_path=path_validation)
     # kgs.util.save_results(os.path.join(save_path, "EA_Result.txt"))
     # kgs.util.save_params(os.path.join(save_path, "EA_Params.txt"))
@@ -144,5 +144,10 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     # test(args.input, args.iteration)
-    test("dataset/EN_FR_100K_V2", 10)
+    # test("dataset/D_W_15K_V2", 10)
+    # test("dataset/D_Y_100K_V2", 10)
+    test("dataset/D_W_100K_V2", 10)
+    # test("dataset/EN_DE_100K_V2", 10)
+    # test("dataset/EN_FR_100K_V2", 10)
+    # test("dataset/industry", 10)
     # test("dataset/industry", 10)
