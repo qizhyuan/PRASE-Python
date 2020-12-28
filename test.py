@@ -101,10 +101,11 @@ def fusion_func_5_5(prob, x, y):
     return 0.5 * prob + 0.5 * np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 
-def test(base, func=None, emb_name=None, iteration=10, load_weight=1.0, load_ent=False, load_emb=False):
+def test(base, func=None, emb_name=None, iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False, load_emb=False, init_reset=False):
     new_base, name = os.path.split(base)
     save_path = os.path.join(os.path.join("output", name))
-    print("\t".join([base, emb_name, str(iteration), str(load_weight), str(load_ent), str(load_emb)]))
+    print("\t".join(["base:", base, "emb_name:", emb_name, "iteration:", str(iteration), "load_weight:", str(load_weight), "reset_weight:",
+                     str(reset_weight), "load_ent:", str(load_ent), "load_emb:", str(load_emb), "init_reset:", str(init_reset)]))
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
@@ -130,6 +131,9 @@ def test(base, func=None, emb_name=None, iteration=10, load_weight=1.0, load_ent
     # ent_links_path = os.path.join(save_path, "test_links")
     kgs.util.test(path_validation, 0.0)
     kgs.util.test(path_validation, 0.1)
+
+    if init_reset is True:
+        kgs.util.reset_ent_align_prob(lambda x: reset_weight * x)
 
     if load_ent is True:
         base_path = os.path.join(save_path, emb_name)
@@ -165,71 +169,61 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     # test(args.input, args.iteration)
-    test(base="dataset/D_W_15K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True)
-    test(base="dataset/D_W_15K_V2", emb_name="IMUSE", iteration=10, load_weight=0.5, load_ent=True)
-    test(base="dataset/D_W_15K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/D_W_15K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_5_5)
-    test(base="dataset/D_W_15K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/D_W_15K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_5_5)
+    test(base="dataset/D_W_15K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         init_reset=True)
+    test(base="dataset/D_W_15K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=False,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
+    test(base="dataset/D_W_15K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
 
-    test(base="dataset/industry", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True)
-    test(base="dataset/industry", emb_name="IMUSE", iteration=10, load_weight=0.5, load_ent=True)
-    test(base="dataset/industry", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/industry", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_5_5)
-    test(base="dataset/industry", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/industry", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_5_5)
+    test(base="dataset/industry", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         init_reset=True)
+    test(base="dataset/industry", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=False,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
+    test(base="dataset/industry", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
 
-    test(base="dataset/EN_DE_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True)
-    test(base="dataset/EN_DE_100K_V2", emb_name="IMUSE", iteration=10, load_weight=0.5, load_ent=True)
-    test(base="dataset/EN_DE_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/EN_DE_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_5_5)
-    test(base="dataset/EN_DE_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/EN_DE_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_5_5)
+    test(base="dataset/EN_DE_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         init_reset=True)
+    test(base="dataset/EN_DE_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=False,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
+    test(base="dataset/EN_DE_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
 
-    test(base="dataset/EN_FR_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True)
-    test(base="dataset/EN_FR_100K_V2", emb_name="IMUSE", iteration=10, load_weight=0.5, load_ent=True)
-    test(base="dataset/EN_FR_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/EN_FR_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_5_5)
-    test(base="dataset/EN_FR_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/EN_FR_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_5_5)
+    test(base="dataset/EN_FR_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         init_reset=True)
+    test(base="dataset/EN_FR_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=False,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
+    test(base="dataset/EN_FR_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
 
-    test(base="dataset/D_W_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True)
-    test(base="dataset/D_W_100K_V2", emb_name="IMUSE", iteration=10, load_weight=0.5, load_ent=True)
-    test(base="dataset/D_W_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/D_W_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_5_5)
-    test(base="dataset/D_W_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/D_W_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_5_5)
+    test(base="dataset/D_W_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         init_reset=True)
+    test(base="dataset/D_W_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=False,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
+    test(base="dataset/D_W_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
 
-    test(base="dataset/D_Y_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True)
-    test(base="dataset/D_Y_100K_V2", emb_name="IMUSE", iteration=10, load_weight=0.5, load_ent=True)
-    test(base="dataset/D_Y_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/D_Y_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=False, load_emb=True,
-         func=fusion_func_5_5)
-    test(base="dataset/D_Y_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_8_2)
-    test(base="dataset/D_Y_100K_V2", emb_name="IMUSE", iteration=10, load_weight=1.0, load_ent=True, load_emb=True,
-         func=fusion_func_5_5)
+    test(base="dataset/D_Y_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         init_reset=True)
+    test(base="dataset/D_Y_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8,
+         load_ent=False,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
+    test(base="dataset/D_Y_100K_V2", emb_name="MTransE", iteration=10, load_weight=1.0, reset_weight=0.8, load_ent=True,
+         load_emb=True,
+         init_reset=True, func=fusion_func_8_2)
+
 
     # test("dataset/industry", 10)
     # # test("dataset/D_Y_100K_V2", 10)
