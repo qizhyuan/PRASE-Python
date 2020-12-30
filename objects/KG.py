@@ -220,6 +220,13 @@ class KG:
                 self.ent_embeddings = np.zeros((len(self.entity_set), len(embedding)))
             self.ent_embeddings[idx, :] = embedding
 
+    def set_ent_embedding(self, idx, emb, func=None):
+        if self.ent_embeddings is not None:
+            if func is None:
+                self.ent_embeddings[idx, :] = emb
+            else:
+                self.ent_embeddings[idx, :] = func(self.entity_dict_by_id[idx].embedding, emb)
+
     def print_kg_info(self):
         print("\nInformation of Knowledge Graph (" + str(self.name) + "):")
         print("- Relation Tuple Number: " + str(int(len(self.relation_tuple_list) / 2)))

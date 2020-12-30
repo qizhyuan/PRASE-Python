@@ -83,12 +83,22 @@ class KGs:
         for i in range(self.iteration):
             self._iter_num = i
             print(str(i + 1) + "-th iteration......")
+            # if i == 0:
+            #     self.util.reset_ent_align_result()
+            #     print("Reset...")
+            #     for j in range(10):
+            #         self.util.test(path=test_path, threshold=0.1 * float(j))
             self.__run_per_iteration()
             if test_path is not None:
                 print("Start testing...")
                 for j in range(10):
                     self.util.test(path=test_path, threshold=0.1 * float(j))
             gc.collect()
+            # if i == 3:
+            #     self.util.reset_ent_align_result()
+            #     print("Reset...")
+            #     for j in range(10):
+            #         self.util.test(path=test_path, threshold=0.1 * float(j))
         print("PARIS Completed!")
         end_time = time.time()
         print("Total time: " + str(end_time - start_time))
@@ -110,6 +120,7 @@ class KGs:
         rel_ongoing_dict_queue = mgr.Queue()
         rel_norm_dict_queue = mgr.Queue()
         ent_match_tuple_queue = mgr.Queue()
+        new_ent_emb_queue = mgr.Queue()
 
         kg_r_fact_dict_by_head = kg_other.fact_dict_by_head
         kg_l_fact_dict_by_tail = kg.fact_dict_by_tail
@@ -136,7 +147,7 @@ class KGs:
                                                                   is_literal_list_r,
                                                                   rel_align_dict_l, rel_align_dict_r,
                                                                   rel_ongoing_dict_queue, rel_norm_dict_queue,
-                                                                  ent_match_tuple_queue,
+                                                                  ent_match_tuple_queue, new_ent_emb_queue,
                                                                   kg_l_ent_embeds, kg_r_ent_embeds,
                                                                   self.fusion_func,
                                                                   self.theta, self.epsilon, self.delta, init,
@@ -163,7 +174,20 @@ class KGs:
         while not rel_norm_dict_queue.empty():
             self.__merge_rel_norm_dict(rel_norm_dict, rel_norm_dict_queue.get())
 
+        # if self._iter_num <= 3:
+        while not new_ent_emb_queue.empty():
+            self.update_ent_embeds(kg, new_ent_emb_queue.get())
+
         self.__update_rel_align_dict(rel_align_dict, rel_ongoing_dict, rel_norm_dict)
+
+    @staticmethod
+    def update_ent_embeds(kg, new_ent_emb_dict, alpha=0.5):
+        print(len(new_ent_emb_dict))
+        def update_function(emb_origin, emb_new):
+            emb_pool = alpha * emb_origin + (1.0 - alpha) * emb_new
+            return emb_pool / np.linalg.norm(emb_pool)
+        for (idx, emb) in new_ent_emb_dict.items():
+            kg.set_ent_embedding(idx, emb, update_function)
 
     @staticmethod
     def __generate_list(kg: KG):
@@ -244,6 +268,22 @@ class KGsUtil:
         self.__get_counterpart_and_prob = get_counterpart_and_prob
         self.__set_counterpart_and_prob = set_counterpart_and_prob
         self.ent_links_candidate = list()
+
+    def reset_ent_align_result(self):
+        for ent in self.kgs.kg_l.entity_set:
+            idx = ent.id
+            self.kgs.sub_ent_match[idx], self.kgs.sub_ent_prob[idx] = None, 0.0
+        for ent in self.kgs.kg_r.entity_set:
+            idx = ent.id
+            self.kgs.sup_ent_match[idx], self.kgs.sup_ent_prob[idx] = None, 0.0
+        emb_l, emb_r = self.kgs.kg_l.ent_embeddings, self.kgs.kg_r.ent_embeddings
+        matrix = np.matmul(emb_l, emb_r.T)
+        max_indices = np.argmax(matrix, axis=1)
+        print(max_indices)
+        for i in range(len(max_indices)):
+            counterpart_id = max_indices[i]
+            self.kgs.sub_ent_match[i], self.kgs.sub_ent_prob[i] = counterpart_id, 0.2
+            self.kgs.sup_ent_match[counterpart_id], self.kgs.sup_ent_prob[counterpart_id] = i, 0.2
 
     def test(self, path, threshold):
         correct_num, total_num = 0.0, 0.0

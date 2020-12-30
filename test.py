@@ -3,6 +3,7 @@ from objects.KGs import KGs
 import os
 import argparse
 import numpy as np
+import math
 
 
 def construct_kg(path_r, path_a=None, sep='\t', name=None):
@@ -98,7 +99,8 @@ def fusion_func_8_2(prob, x, y):
 
 
 def fusion_func_5_5(prob, x, y):
-    return 0.5 * prob + 0.5 * np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
+    sim = np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
+    return 0.5 * prob + 0.5 * sim
 
 
 def test(base, func=None, emb_name=None, iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False, load_emb=False, init_reset=False):
@@ -169,55 +171,55 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     # test(args.input, args.iteration)
-    test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
-         init_reset=False)
-    test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=0.5, reset_weight=1.0, load_ent=True,
-         init_reset=False)
-    test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
+    # test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+    #      init_reset=False)
+    # test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=0.5, reset_weight=1.0, load_ent=True,
+    #      init_reset=False)
+    test(base="dataset/industry", emb_name="BootEA", iteration=20, load_weight=1.0, reset_weight=1.0, load_ent=False,
          load_emb=True,
-         init_reset=False, func=fusion_func_8_2)
-    test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
-         load_emb=True,
-         init_reset=False, func=fusion_func_5_5)
-    test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
-         load_emb=True,
-         init_reset=False, func=fusion_func_8_2)
-    test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
-         load_emb=True,
-         init_reset=False, func=fusion_func_5_5)
-
-    test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
-         init_reset=False)
-    test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=0.5, reset_weight=1.0, load_ent=True,
-         init_reset=False)
-    test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
-         load_emb=True,
-         init_reset=False, func=fusion_func_8_2)
-    test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
-         load_emb=True,
-         init_reset=False, func=fusion_func_5_5)
-    test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
-         load_emb=True,
-         init_reset=False, func=fusion_func_8_2)
-    test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
-         load_emb=True,
-         init_reset=False, func=fusion_func_5_5)
-
-    test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
-         init_reset=False)
-    test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=0.5, reset_weight=1.0, load_ent=True,
-         init_reset=False)
-    test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
-         load_emb=True,
-         init_reset=False, func=fusion_func_8_2)
-    test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
-         load_emb=True,
-         init_reset=False, func=fusion_func_5_5)
-    test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
-         load_emb=True,
-         init_reset=False, func=fusion_func_8_2)
-    test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
-         load_emb=True,
-         init_reset=False, func=fusion_func_5_5)
+         init_reset=True, func=fusion_func_5_5)
+    # test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
+    #      load_emb=True,
+    #      init_reset=False, func=fusion_func_5_5)
+    # test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+    #      load_emb=True,
+    #      init_reset=False, func=fusion_func_8_2)
+    # test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+    #      load_emb=True,
+    #      init_reset=False, func=fusion_func_5_5)
+    #
+    # test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+    #      init_reset=False)
+    # test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=0.5, reset_weight=1.0, load_ent=True,
+    #      init_reset=False)
+    # test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
+    #      load_emb=True,
+    #      init_reset=False, func=fusion_func_8_2)
+    # test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
+    #      load_emb=True,
+    #      init_reset=False, func=fusion_func_5_5)
+    # test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+    #      load_emb=True,
+    #      init_reset=False, func=fusion_func_8_2)
+    # test(base="dataset/D_W_15K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+    #      load_emb=True,
+    #      init_reset=False, func=fusion_func_5_5)
+    #
+    # test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+    #      init_reset=False)
+    # test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=0.5, reset_weight=1.0, load_ent=True,
+    #      init_reset=False)
+    # test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
+    #      load_emb=True,
+    #      init_reset=False, func=fusion_func_8_2)
+    # test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
+    #      load_emb=True,
+    #      init_reset=False, func=fusion_func_5_5)
+    # test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+    #      load_emb=True,
+    #      init_reset=False, func=fusion_func_8_2)
+    # test(base="dataset/D_W_100K_V2", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+    #      load_emb=True,
+    #      init_reset=False, func=fusion_func_5_5)
 
 
