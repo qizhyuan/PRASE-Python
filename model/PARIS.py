@@ -42,29 +42,29 @@ def get_rel_align_prob(dictionary, rel_l, rel_r):
     return prob
 
 
-def update_ent_align_prob(ent_align_ongoing_dict, ent_match, ent_prob, kg_l_ent_embeds, kg_r_ent_embeds, ent, fusion_func):
+def update_ent_align_prob(ent_align_ongoing_dict, ent_match, ent_prob, kg_l_ent_embeds, kg_r_ent_embeds, ent, fusion_func, init):
     counterpart, value = None, 0.0
-    candidate_dict = dict()
-    for (candidate, prob) in ent_align_ongoing_dict.items():
-        if kg_l_ent_embeds is not None and kg_r_ent_embeds is not None and fusion_func is not None:
-            ent_emb = kg_l_ent_embeds[ent, :]
-            candidate_emb = kg_r_ent_embeds[candidate, :]
-            prob = np.dot(ent_emb, candidate_emb) / (np.linalg.norm(ent_emb) * np.linalg.norm(candidate_emb))
-            candidate_dict[candidate] = prob
-
-    candidate_list = sorted(candidate_dict.items(), key=lambda x: x[1], reverse=True)
-    idx = 0
-    for (candidate, prob) in candidate_list:
-        candidate_dict[candidate] = 1.0 * math.pow(0.95, idx)
-        idx += 1
+    # candidate_dict = dict()
+    # for (candidate, prob) in ent_align_ongoing_dict.items():
+    #     if kg_l_ent_embeds is not None and kg_r_ent_embeds is not None and fusion_func is not None:
+    #         ent_emb = kg_l_ent_embeds[ent, :]
+    #         candidate_emb = kg_r_ent_embeds[candidate, :]
+    #         prob = np.dot(ent_emb, candidate_emb) / (np.linalg.norm(ent_emb) * np.linalg.norm(candidate_emb))
+    #         candidate_dict[candidate] = prob
+    #
+    # candidate_list = sorted(candidate_dict.items(), key=lambda x: x[1], reverse=True)
+    # idx = 0
+    # for (candidate, prob) in candidate_list:
+    #     candidate_dict[candidate] = 1.0 * math.pow(0.95, idx)
+    #     idx += 1
 
     for (candidate, prob) in ent_align_ongoing_dict.items():
         val = 1.0 - prob
-        if kg_l_ent_embeds is not None and kg_r_ent_embeds is not None and fusion_func is not None:
-            # ent_emb = kg_l_ent_embeds[ent, :]
-            # candidate_emb = kg_r_ent_embeds[candidate, :]
-            # val = fusion_func(val, ent_emb, candidate_emb)
-            val = 0.8 * val + 0.2 * candidate_dict[candidate]
+        if not init and kg_l_ent_embeds is not None and kg_r_ent_embeds is not None and fusion_func is not None:
+            ent_emb = kg_l_ent_embeds[ent, :]
+            candidate_emb = kg_r_ent_embeds[candidate, :]
+            val = fusion_func(val, ent_emb, candidate_emb)
+            # val = 0.8 * val + 0.2 * candidate_dict[candidate]
         if val >= value:
             value, counterpart = val, candidate
     value = 1.0 if value > 1.0 else value
@@ -128,7 +128,7 @@ def one_iteration_one_way(queue, kg_r_fact_dict_by_head,
                           fusion_func,
                           theta, epsilon, delta, init=False, ent_align=True):
     matrix = np.matmul(kg_l_ent_embeds, kg_r_ent_embeds.T)
-    indices = np.argpartition(-matrix, 5)
+    indices = np.argpartition(-matrix, 10)
     rel_ongoing_dict, rel_norm_dict, new_ent_emb = dict(), dict(), dict()
     while not queue.empty():
         # noinspection PyBroadException
@@ -137,8 +137,8 @@ def one_iteration_one_way(queue, kg_r_fact_dict_by_head,
         except Exception:
             break
         ent_align_ongoing_dict = dict()
-        for i in range(5):
-            ent_align_ongoing_dict[indices[ent_id, i]] = 1.0 - 0.05
+        for i in range(10):
+            ent_align_ongoing_dict[indices[ent_id, i]] = 1.0 - 0.001
         ent_fact_list = kg_l_fact_dict_by_tail.get(ent_id, list())
         for (rel_id, head_id) in ent_fact_list:
             head_counterpart, head_eqv_prob = get_counterpart_id_and_prob(sub_ent_match, sub_ent_prob, head_id)
@@ -161,7 +161,7 @@ def one_iteration_one_way(queue, kg_r_fact_dict_by_head,
                                           rel_id, rel_counterpart_id, tail_counterpart_id,
                                           head_eqv_prob, theta, epsilon, delta, init)
         if ent_align:
-            update_ent_align_prob(ent_align_ongoing_dict, sub_ent_match, sub_ent_prob, kg_l_ent_embeds, kg_r_ent_embeds, ent_id, fusion_func)
+            update_ent_align_prob(ent_align_ongoing_dict, sub_ent_match, sub_ent_prob, kg_l_ent_embeds, kg_r_ent_embeds, ent_id, fusion_func, init)
         # graph_convolution(ent_align_ongoing_dict, kg_l_ent_embeds, kg_r_ent_embeds, new_ent_emb, ent_id)
     rel_ongoing_dict_queue.put(rel_ongoing_dict), rel_norm_dict_queue.put(rel_norm_dict)
     ent_match_tuple_queue.put((sub_ent_match, sub_ent_prob))

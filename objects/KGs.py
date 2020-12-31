@@ -182,7 +182,7 @@ class KGs:
 
     @staticmethod
     def update_ent_embeds(kg, new_ent_emb_dict, alpha=0.5):
-        print(len(new_ent_emb_dict))
+        # print(len(new_ent_emb_dict))
         def update_function(emb_origin, emb_new):
             emb_pool = alpha * emb_origin + (1.0 - alpha) * emb_new
             return emb_pool / np.linalg.norm(emb_pool)

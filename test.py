@@ -122,7 +122,7 @@ def test(base, func=None, emb_name=None, iteration=10, load_weight=1.0, reset_we
     kg2 = construct_kg(path_r_2, path_a_2, name=str(name + "-KG2"))
     kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1, workers=6)
     # kgs.run(test_path=path_validation)
-    kgs.util.load_params(os.path.join(save_path, "EA_Params.txt"))
+    # kgs.util.load_params(os.path.join(save_path, "EA_Params.txt"))
     # kgs.util.test(path_validation, 0.0)
     # kgs.util.generate_input_for_embed_align(link_path=path_validation, save_dir=save_path, threshold=0.1)
 
@@ -159,6 +159,8 @@ def test(base, func=None, emb_name=None, iteration=10, load_weight=1.0, reset_we
     # kgs.util.load_ent_links(func=lambda x: 0.5 * x, path=ent_links_path, force=True)
 
     kgs.run(test_path=path_validation)
+    save_path = os.path.join(save_path, "links")
+    kgs.util.generate_input_for_embed_align(link_path=path_validation, save_dir=save_path, threshold=0.1)
     # kgs.util.save_results(os.path.join(save_path, "EA_Result.txt"))
     # kgs.util.save_params(os.path.join(save_path, "EA_Params.txt"))
 
@@ -175,9 +177,9 @@ if __name__ == '__main__':
     #      init_reset=False)
     # test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=0.5, reset_weight=1.0, load_ent=True,
     #      init_reset=False)
-    test(base="dataset/industry", emb_name="BootEA", iteration=20, load_weight=1.0, reset_weight=1.0, load_ent=False,
+    test(base="dataset/industry", emb_name="IMUSE2", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
          load_emb=True,
-         init_reset=True, func=fusion_func_5_5)
+         init_reset=True, func=fusion_func_8_2)
     # test(base="dataset/industry", emb_name="BootEA", iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
     #      load_emb=True,
     #      init_reset=False, func=fusion_func_5_5)
