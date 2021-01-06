@@ -89,10 +89,7 @@ class KGs:
             #     for j in range(10):
             #         self.util.test(path=test_path, threshold=0.1 * float(j))
             self.__run_per_iteration()
-            if test_path is not None:
-                print("Start testing...")
-                for j in range(10):
-                    self.util.test(path=test_path, threshold=0.1 * float(j))
+            self.util.test(path=test_path, threshold=[0.1 * i for i in range(10)])
             gc.collect()
             # if i == 3:
             #     self.util.reset_ent_align_result()
@@ -120,7 +117,6 @@ class KGs:
         rel_ongoing_dict_queue = mgr.Queue()
         rel_norm_dict_queue = mgr.Queue()
         ent_match_tuple_queue = mgr.Queue()
-        new_ent_emb_queue = mgr.Queue()
 
         kg_r_fact_dict_by_head = kg_other.fact_dict_by_head
         kg_l_fact_dict_by_tail = kg.fact_dict_by_tail
@@ -147,7 +143,7 @@ class KGs:
                                                                   is_literal_list_r,
                                                                   rel_align_dict_l, rel_align_dict_r,
                                                                   rel_ongoing_dict_queue, rel_norm_dict_queue,
-                                                                  ent_match_tuple_queue, new_ent_emb_queue,
+                                                                  ent_match_tuple_queue,
                                                                   kg_l_ent_embeds, kg_r_ent_embeds,
                                                                   self.fusion_func,
                                                                   self.theta, self.epsilon, self.delta, init,
@@ -175,8 +171,8 @@ class KGs:
             self.__merge_rel_norm_dict(rel_norm_dict, rel_norm_dict_queue.get())
 
         # if self._iter_num <= 3:
-        while not new_ent_emb_queue.empty():
-            self.update_ent_embeds(kg, new_ent_emb_queue.get())
+        # while not new_ent_emb_queue.empty():
+        #     self.update_ent_embeds(kg, new_ent_emb_queue.get())
 
         self.__update_rel_align_dict(rel_align_dict, rel_ongoing_dict, rel_norm_dict)
 
@@ -186,6 +182,7 @@ class KGs:
         def update_function(emb_origin, emb_new):
             emb_pool = alpha * emb_origin + (1.0 - alpha) * emb_new
             return emb_pool / np.linalg.norm(emb_pool)
+
         for (idx, emb) in new_ent_emb_dict.items():
             kg.set_ent_embedding(idx, emb, update_function)
 
@@ -286,41 +283,56 @@ class KGsUtil:
             self.kgs.sup_ent_match[counterpart_id], self.kgs.sup_ent_prob[counterpart_id] = i, 0.2
 
     def test(self, path, threshold):
-        correct_num, total_num = 0.0, 0.0
-        ent_align_result = set()
-        for ent_id in self.kgs.kg_l.ent_id_list:
-            counterpart_id = self.kgs.sub_ent_match[ent_id]
-            if counterpart_id is not None:
-                prob = self.kgs.sub_ent_prob[ent_id]
-                if prob < threshold:
-                    continue
-                ent_align_result.add((ent_id, counterpart_id))
-
-        if len(ent_align_result) == 0:
-            print("Threshold: " + format(threshold, ".3f") + "\tException: no satisfied alignment result")
-            return
+        gold_result = set()
         with open(path, "r", encoding="utf8") as f:
             for line in f.readlines():
                 params = str.strip(line).split("\t")
                 ent_l, ent_r = params[0].strip(), params[1].strip()
-                obj_l, obj_r = self.kgs.kg_l.entity_dict_by_name.get(ent_l), self.kgs.kg_r.entity_dict_by_name.get(ent_r)
+                obj_l, obj_r = self.kgs.kg_l.entity_dict_by_name.get(ent_l), self.kgs.kg_r.entity_dict_by_name.get(
+                    ent_r)
                 if obj_l is None:
                     print("Exception: fail to load Entity (" + ent_l + ")")
                 if obj_r is None:
                     print("Exception: fail to load Entity (" + ent_r + ")")
                 if obj_l is None or obj_r is None:
                     continue
-                if (obj_l.id, obj_r.id) in ent_align_result:
-                    correct_num += 1.0
-                total_num += 1.0
+                gold_result.add((obj_l.id, obj_r.id))
 
-        if total_num == 0.0:
-            print("Threshold: " + format(threshold, ".3f") + "\tException: no satisfied instance for testing")
+        threshold_list = []
+        if isinstance(threshold, float) or isinstance(threshold, int):
+            threshold_list.append(float(threshold))
         else:
-            precision, recall = correct_num / len(ent_align_result), correct_num / total_num
-            f1_score = 2.0 * precision * recall / (precision + recall)
-            print("Threshold: " + format(threshold, ".3f") + "\tPrecision: " + format(precision, ".6f") +
-                  "\tRecall: " + format(recall, ".6f") + "\tF1-Score: " + format(f1_score, ".6f"))
+            threshold_list = threshold
+
+        for threshold_item in threshold_list:
+            ent_align_result = set()
+            for ent_id in self.kgs.kg_l.ent_id_list:
+                counterpart_id = self.kgs.sub_ent_match[ent_id]
+                if counterpart_id is not None:
+                    prob = self.kgs.sub_ent_prob[ent_id]
+                    if prob < threshold_item:
+                        continue
+                    ent_align_result.add((ent_id, counterpart_id))
+
+            correct_num = len(gold_result & ent_align_result)
+            predict_num = len(ent_align_result)
+            total_num = len(gold_result)
+
+            if predict_num == 0:
+                print("Threshold: " + format(threshold_item, ".3f") + "\tException: no satisfied alignment result")
+                continue
+
+            if total_num == 0:
+                print("Threshold: " + format(threshold_item, ".3f") + "\tException: no satisfied instance for testing")
+            else:
+                precision, recall = correct_num / predict_num, correct_num / total_num
+                if precision <= 0.0 or recall <= 0.0:
+                    print("Threshold: " + format(threshold_item, ".3f") + "\tPrecision: " + format(precision, ".6f") +
+                          "\tRecall: " + format(recall, ".6f") + "\tF1-Score: Nan")
+                else:
+                    f1_score = 2.0 * precision * recall / (precision + recall)
+                    print("Threshold: " + format(threshold_item, ".3f") + "\tPrecision: " + format(precision, ".6f") +
+                          "\tRecall: " + format(recall, ".6f") + "\tF1-Score: " + format(f1_score, ".6f"))
 
     def generate_input_for_embed_align(self, link_path, save_dir="output", threshold=0.0):
         ent_align_predict, visited = set(), set()
@@ -336,7 +348,8 @@ class KGsUtil:
             for line in f.readlines():
                 params = str.strip(line).split("\t")
                 ent_l, ent_r = params[0].strip(), params[1].strip()
-                obj_l, obj_r = self.kgs.kg_l.entity_dict_by_name.get(ent_l), self.kgs.kg_r.entity_dict_by_name.get(ent_r)
+                obj_l, obj_r = self.kgs.kg_l.entity_dict_by_name.get(ent_l), self.kgs.kg_r.entity_dict_by_name.get(
+                    ent_r)
                 if obj_l is None or obj_r is None:
                     continue
                 if obj_l not in visited:
@@ -449,7 +462,8 @@ class KGsUtil:
                     continue
                 params = line.strip().split("\t")
                 assert len(params) == 4
-                prefix, name_l, name_r, prob = params[0].strip(), params[1].strip(), params[2].strip(), float(params[3].strip())
+                prefix, name_l, name_r, prob = params[0].strip(), params[1].strip(), params[2].strip(), float(
+                    params[3].strip())
                 if prefix == "L":
                     obj_l, obj_r = get_obj_by_name(self.kgs.kg_l, self.kgs.kg_r, name_l, name_r)
                 else:
@@ -468,7 +482,8 @@ class KGsUtil:
                         self.__params_loader_helper(self.kgs.rel_align_dict_r, obj_l.id, obj_r.id, prob)
         return
 
-    def load_ent_links(self, path, func=None, num=None, init_value=None, threshold_min=0.0, threshold_max=1.0, force=False):
+    def load_ent_links(self, path, func=None, num=None, init_value=None, threshold_min=0.0, threshold_max=1.0,
+                       force=False):
         ent_link_list = list()
         with open(path, "r", encoding="utf8") as f:
             for line in f.readlines():

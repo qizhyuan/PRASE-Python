@@ -123,13 +123,13 @@ def one_iteration_one_way(queue, kg_r_fact_dict_by_head,
                           is_literal_list_r,
                           rel_align_dict_l, rel_align_dict_r,
                           rel_ongoing_dict_queue, rel_norm_dict_queue,
-                          ent_match_tuple_queue, new_ent_emb_queue,
+                          ent_match_tuple_queue,
                           kg_l_ent_embeds, kg_r_ent_embeds,
                           fusion_func,
                           theta, epsilon, delta, init=False, ent_align=True):
-    matrix = np.matmul(kg_l_ent_embeds, kg_r_ent_embeds.T)
-    indices = np.argpartition(-matrix, 10)
-    rel_ongoing_dict, rel_norm_dict, new_ent_emb = dict(), dict(), dict()
+    # matrix = np.matmul(kg_l_ent_embeds, kg_r_ent_embeds.T)
+    # indices = np.argpartition(-matrix, 10)
+    rel_ongoing_dict, rel_norm_dict = dict(), dict()
     while not queue.empty():
         # noinspection PyBroadException
         try:
@@ -137,8 +137,8 @@ def one_iteration_one_way(queue, kg_r_fact_dict_by_head,
         except Exception:
             break
         ent_align_ongoing_dict = dict()
-        for i in range(10):
-            ent_align_ongoing_dict[indices[ent_id, i]] = 1.0 - 0.001
+        # for i in range(10):
+        #     ent_align_ongoing_dict[indices[ent_id, i]] = 1.0 - 0.001
         ent_fact_list = kg_l_fact_dict_by_tail.get(ent_id, list())
         for (rel_id, head_id) in ent_fact_list:
             head_counterpart, head_eqv_prob = get_counterpart_id_and_prob(sub_ent_match, sub_ent_prob, head_id)
@@ -165,5 +165,4 @@ def one_iteration_one_way(queue, kg_r_fact_dict_by_head,
         # graph_convolution(ent_align_ongoing_dict, kg_l_ent_embeds, kg_r_ent_embeds, new_ent_emb, ent_id)
     rel_ongoing_dict_queue.put(rel_ongoing_dict), rel_norm_dict_queue.put(rel_norm_dict)
     ent_match_tuple_queue.put((sub_ent_match, sub_ent_prob))
-    new_ent_emb_queue.put(new_ent_emb)
     exit(1)
