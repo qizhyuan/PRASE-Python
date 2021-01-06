@@ -102,10 +102,10 @@ def fusion_func_5_5(prob, x, y):
     return 0.5 * prob + 0.5 * np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 
-def test(base, func=None, emb_name=None, iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False, load_emb=False, init_reset=False):
+def test(base, func=None, emb_name=None, iteration=10, worker=6, load_weight=1.0, reset_weight=1.0, load_ent=False, load_emb=False, init_reset=False):
     new_base, name = os.path.split(base)
     save_path = os.path.join(os.path.join("output", name))
-    print("\t".join(["path:", base, "emb_name:", emb_name, "iteration:", str(iteration), "load_weight:", str(load_weight), "reset_weight:",
+    print("\t".join(["path:", base, "emb_name:", emb_name, "iteration:", str(iteration), "worker:", str(worker), "load_weight:", str(load_weight), "reset_weight:",
                      str(reset_weight), "load_ent:", str(load_ent), "load_emb:", str(load_emb), "init_reset:", str(init_reset)]))
     if not os.path.exists(save_path):
         os.makedirs(save_path)
@@ -124,7 +124,7 @@ def test(base, func=None, emb_name=None, iteration=10, load_weight=1.0, reset_we
     path_validation = os.path.join(base, "ent_links")
     kg1 = construct_kg(path_r_1, path_a_1, name=str(name + "-KG1"))
     kg2 = construct_kg(path_r_2, path_a_2, name=str(name + "-KG2"))
-    kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1, workers=6)
+    kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1, workers=worker)
     # kgs.run(test_path=path_validation)
     kgs.util.load_params(os.path.join(save_path, "EA_Params.txt"))
     # kgs.util.test(path_validation, 0.0)
@@ -173,29 +173,30 @@ parser = argparse.ArgumentParser(description="PARIS_PYTHON")
 # parser.add_argument('--iteration', type=int, default=30)
 parser.add_argument('--model', type=str)
 parser.add_argument('--base', type=str)
+parser.add_argument('--worker', type=int, default=6)
 
 args = parser.parse_args()
 
 if __name__ == '__main__':
     # test(args.input, args.iteration)
-    name, base = args.model, args.base
+    name, base, worker = args.model, args.base, args.worker
     data_list = ["industry", "D_W_15K_V2", "D_W_100K_V2", "EN_DE_100K_V2", "EN_FR_100K_V2", "D_Y_100K_V2"]
     for data_name in data_list:
         path = os.path.join(base, data_name)
-        test(base=path, emb_name=name, iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+        test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=True,
              init_reset=False)
-        test(base=path, emb_name=name, iteration=10, load_weight=0.5, reset_weight=1.0, load_ent=True,
+        test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=0.5, reset_weight=1.0, load_ent=True,
              init_reset=False)
-        test(base=path, emb_name=name, iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+        test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=True,
              load_emb=True,
              init_reset=True, func=fusion_func_8_2)
-        test(base=path, emb_name=name, iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=False,
+        test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=False,
              load_emb=True,
              init_reset=False, func=fusion_func_5_5)
-        test(base=path, emb_name=name, iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+        test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=True,
              load_emb=True,
              init_reset=False, func=fusion_func_8_2)
-        test(base=path, emb_name=name, iteration=10, load_weight=1.0, reset_weight=1.0, load_ent=True,
+        test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=True,
              load_emb=True,
              init_reset=False, func=fusion_func_5_5)
         print("------------------------------------------------------------------------")
