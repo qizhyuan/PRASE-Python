@@ -187,9 +187,9 @@ if __name__ == '__main__':
              init_reset=False)
         test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=0.5, reset_weight=1.0, load_ent=True,
              init_reset=False)
-        test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=True,
+        test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=False,
              load_emb=True,
-             init_reset=True, func=fusion_func_8_2)
+             init_reset=False, func=fusion_func_8_2)
         test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=False,
              load_emb=True,
              init_reset=False, func=fusion_func_5_5)
