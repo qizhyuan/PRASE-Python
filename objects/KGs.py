@@ -38,6 +38,11 @@ class KGs:
         self.__init()
 
     def __init(self):
+        if not self.kg_l.is_init():
+            self.kg_l.init()
+        if not self.kg_r.is_init():
+            self.kg_r.init()
+
         kg_l_ent_num = len(self.kg_l.entity_set) + len(self.kg_l.literal_set)
         kg_r_ent_num = len(self.kg_r.entity_set) + len(self.kg_r.literal_set)
         self.sub_ent_match = [None for _ in range(kg_l_ent_num)]
@@ -58,8 +63,8 @@ class KGs:
         if counterpart_id is None:
             return None, 0.0
         else:
-            counterpart = self.kg_r.entity_dict_by_id.get(counterpart_id) if source \
-                else self.kg_l.entity_dict_by_id.get(counterpart_id)
+            counterpart = self.kg_r.ent_lite_list_by_id[counterpart_id] if source \
+                else self.kg_l.ent_lite_list_by_id[counterpart_id]
             return counterpart, self.sub_ent_prob[ent.id] if source else self.sup_ent_prob[ent.id]
 
     def __set_counterpart_and_prob(self, ent_l, ent_r, prob, force=False):
@@ -83,19 +88,9 @@ class KGs:
         for i in range(self.iteration):
             self._iter_num = i
             print(str(i + 1) + "-th iteration......")
-            # if i == 0:
-            #     self.util.reset_ent_align_result()
-            #     print("Reset...")
-            #     for j in range(10):
-            #         self.util.test(path=test_path, threshold=0.1 * float(j))
             self.__run_per_iteration()
             self.util.test(path=test_path, threshold=[0.1 * i for i in range(10)])
             gc.collect()
-            # if i == 3:
-            #     self.util.reset_ent_align_result()
-            #     print("Reset...")
-            #     for j in range(10):
-            #         self.util.test(path=test_path, threshold=0.1 * float(j))
         print("PARIS Completed!")
         end_time = time.time()
         print("Total time: " + str(end_time - start_time))
@@ -170,15 +165,10 @@ class KGs:
         while not rel_norm_dict_queue.empty():
             self.__merge_rel_norm_dict(rel_norm_dict, rel_norm_dict_queue.get())
 
-        # if self._iter_num <= 3:
-        # while not new_ent_emb_queue.empty():
-        #     self.update_ent_embeds(kg, new_ent_emb_queue.get())
-
         self.__update_rel_align_dict(rel_align_dict, rel_ongoing_dict, rel_norm_dict)
 
     @staticmethod
     def update_ent_embeds(kg, new_ent_emb_dict, alpha=0.5):
-        # print(len(new_ent_emb_dict))
         def update_function(emb_origin, emb_new):
             emb_pool = alpha * emb_origin + (1.0 - alpha) * emb_new
             return emb_pool / np.linalg.norm(emb_pool)
@@ -444,17 +434,17 @@ class KGsUtil:
     def load_params(self, path="output/EA_Params", init=True):
         self.kgs.has_load = init
 
-        def get_obj_by_name(kg_l, kg_r, name_l, name_r):
-            obj_l, obj_r = kg_l.literal_dict_by_name.get(name_l), kg_r.literal_dict_by_name.get(name_r)
-            if obj_l is None or obj_r is None:
-                obj_l, obj_r = kg_l.entity_dict_by_name.get(name_l), kg_r.entity_dict_by_name.get(name_r)
-            if obj_l is None or obj_r is None:
-                obj_l, obj_r = kg_l.entity_dict_by_name.get(name_l), kg_r.entity_dict_by_name.get(name_r)
-            if obj_l is None or obj_r is None:
-                obj_l, obj_r = kg_l.relation_dict_by_name.get(name_l), kg_r.relation_dict_by_name.get(name_r)
-            if obj_l is None or obj_r is None:
-                obj_l, obj_r = kg_l.attribute_dict_by_name.get(name_l), kg_r.attribute_dict_by_name.get(name_r)
-            return obj_l, obj_r
+        def get_obj_by_name(kg_l, kg_r, name1, name2):
+            obj1, obj2 = kg_l.literal_dict_by_name.get(name1), kg_r.literal_dict_by_name.get(name2)
+            if obj1 is None or obj2 is None:
+                obj1, obj2 = kg_l.entity_dict_by_name.get(name1), kg_r.entity_dict_by_name.get(name2)
+            if obj1 is None or obj2 is None:
+                obj1, obj2 = kg_l.entity_dict_by_name.get(name1), kg_r.entity_dict_by_name.get(name2)
+            if obj1 is None or obj2 is None:
+                obj1, obj2 = kg_l.relation_dict_by_name.get(name1), kg_r.relation_dict_by_name.get(name2)
+            if obj1 is None or obj2 is None:
+                obj1, obj2 = kg_l.attribute_dict_by_name.get(name1), kg_r.attribute_dict_by_name.get(name2)
+            return obj1, obj2
 
         with open(path, "r", encoding="utf8") as f:
             for line in f.readlines():
