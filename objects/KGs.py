@@ -82,6 +82,12 @@ class KGs:
     def set_fusion_func(self, func):
         self.fusion_func = func
 
+    def set_iteration(self, iteration):
+        self.iteration = iteration
+
+    def set_worker_num(self, worker_num):
+        self.workers = worker_num
+
     def run(self, test_path=None):
         start_time = time.time()
         print("Start...")
@@ -375,19 +381,19 @@ class KGsUtil:
                     ent_dict[(obj, counterpart)] = [prob]
 
         for (rel_id, rel_counterpart_id_dict) in self.kgs.rel_align_dict_l.items():
-            rel = self.kgs.kg_l.relation_dict_by_id.get(rel_id)
+            rel = self.kgs.kg_l.rel_attr_list_by_id[rel_id]
             dictionary = attr_dict if rel.is_attribute() else rel_dict
             for (rel_counterpart_id, prob) in rel_counterpart_id_dict.items():
                 if prob > self.kgs.theta:
-                    rel_counterpart = self.kgs.kg_r.relation_dict_by_id.get(rel_counterpart_id)
+                    rel_counterpart = self.kgs.kg_r.rel_attr_list_by_id[rel_counterpart_id]
                     dictionary[(rel, rel_counterpart)] = [prob, 0.0]
 
         for (rel_id, rel_counterpart_id_dict) in self.kgs.rel_align_dict_r.items():
-            rel = self.kgs.kg_r.relation_dict_by_id.get(rel_id)
+            rel = self.kgs.kg_r.rel_attr_list_by_id[rel_id]
             dictionary = attr_dict if rel.is_attribute() else rel_dict
             for (rel_counterpart_id, prob) in rel_counterpart_id_dict.items():
                 if prob > self.kgs.theta:
-                    rel_counterpart = self.kgs.kg_l.relation_dict_by_id.get(rel_counterpart_id)
+                    rel_counterpart = self.kgs.kg_l.rel_attr_list_by_id[rel_counterpart_id]
                     if not dictionary.__contains__((rel_counterpart, rel)):
                         dictionary[(rel_counterpart, rel)] = [0.0, 0.0]
                     dictionary[(rel_counterpart, rel)][-1] = prob
@@ -416,17 +422,17 @@ class KGsUtil:
                 if counterpart is not None:
                     f.write("\t".join(["R", obj.name, counterpart.name, str(prob)]) + "\n")
             for (rel_id, rel_counterpart_id_dict) in self.kgs.rel_align_dict_l.items():
-                rel = self.kgs.kg_l.relation_dict_by_id.get(rel_id)
+                rel = self.kgs.kg_l.rel_attr_list_by_id[rel_id]
                 for (rel_counterpart_id, prob) in rel_counterpart_id_dict.items():
                     if prob > 0.0:
-                        rel_counterpart = self.kgs.kg_r.relation_dict_by_id.get(rel_counterpart_id)
+                        rel_counterpart = self.kgs.kg_r.rel_attr_list_by_id[rel_counterpart_id]
                         prefix = "L"
                         f.write("\t".join([prefix, rel.name, rel_counterpart.name, str(prob)]) + "\n")
             for (rel_id, rel_counterpart_id_dict) in self.kgs.rel_align_dict_r.items():
-                rel = self.kgs.kg_r.relation_dict_by_id.get(rel_id)
+                rel = self.kgs.kg_r.rel_attr_list_by_id[rel_id]
                 for (rel_counterpart_id, prob) in rel_counterpart_id_dict.items():
                     if prob > 0.0:
-                        rel_counterpart = self.kgs.kg_l.relation_dict_by_id.get(rel_counterpart_id)
+                        rel_counterpart = self.kgs.kg_l.rel_attr_list_by_id[rel_counterpart_id]
                         prefix = "R"
                         f.write("\t".join([prefix, rel.name, rel_counterpart.name, str(prob)]) + "\n")
         return

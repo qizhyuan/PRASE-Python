@@ -1,5 +1,5 @@
-import argparse
 import os
+import time
 
 import numpy as np
 
@@ -55,92 +55,113 @@ def construct_kg(path_r, path_a=None, sep='\t', name=None):
     return kg
 
 
-def fusion_func_8_2(prob, x, y):
+def construct_kgs(dataset_dir, name="KGs", load_chk=None):
+    path_r_1 = os.path.join(dataset_dir, "rel_triples_1")
+    path_a_1 = os.path.join(dataset_dir, "attr_triples_1")
+
+    path_r_2 = os.path.join(dataset_dir, "rel_triples_2")
+    path_a_2 = os.path.join(dataset_dir, "attr_triples_2")
+
+    kg1 = construct_kg(path_r_1, path_a_1, name=str(name + "-KG1"))
+    kg2 = construct_kg(path_r_2, path_a_2, name=str(name + "-KG2"))
+    kgs = KGs(kg1=kg1, kg2=kg2)
+    # load the previously saved PRASE model
+    if load_chk is not None:
+        kgs.util.load_params(load_chk)
+    return kgs
+
+
+# the balancing function for PRASE
+def fusion_func(prob, x, y):
     return 0.8 * prob + 0.2 * np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 
-def fusion_func_5_5(prob, x, y):
-    return 0.5 * prob + 0.5 * np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
+def run_init_iteration(kgs, ground_truth_path=None):
+    kgs.run(test_path=ground_truth_path)
 
 
-def test(base, func=None, emb_name=None, iteration=10, worker=6, load_weight=1.0, reset_weight=1.0, load_ent=False, load_emb=False, init_reset=False):
-    new_base, name = os.path.split(base)
-    save_path = os.path.join(os.path.join("output", name))
-    print("\t".join(["path:", base, "emb_name:", emb_name, "iteration:", str(iteration), "worker:", str(worker), "load_weight:", str(load_weight), "reset_weight:",
-                     str(reset_weight), "load_ent:", str(load_ent), "load_emb:", str(load_emb), "init_reset:", str(init_reset)]))
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-
-    if func is fusion_func_8_2:
-        print("func: fusion_func_8_2")
-    if func is fusion_func_5_5:
-        print("func: fusion_func_5_5")
-
-    path_r_1 = os.path.join(base, "rel_triples_1")
-    path_a_1 = os.path.join(base, "attr_triples_1")
-
-    path_r_2 = os.path.join(base, "rel_triples_2")
-    path_a_2 = os.path.join(base, "attr_triples_2")
-
-    path_validation = os.path.join(base, "ent_links")
-    kg1 = construct_kg(path_r_1, path_a_1, name=str(name + "-KG1"))
-    kg2 = construct_kg(path_r_2, path_a_2, name=str(name + "-KG2"))
-    kgs = KGs(kg1=kg1, kg2=kg2, iteration=iteration, theta=0.1, workers=worker)
-
-    kgs.util.test(path_validation, [0.0, 0.1])
-
+def run_prase_iteration(kgs, embed_dir, ground_truth_path=None, load_weight=1.0, reset_weight=1.0, load_ent=True,
+                        load_emb=True,
+                        init_reset=False, prase_func=None):
     if init_reset is True:
+        # load_weight: scale the mapping probability predicted by the PARIS module if loading PRASE from check point
         kgs.util.reset_ent_align_prob(lambda x: reset_weight * x)
 
+    # mapping feedback
     if load_ent is True:
-        base_path = os.path.join(save_path, emb_name)
-        ent_links_path = os.path.join(base_path, "alignment_results_12")
+        ent_links_path = os.path.join(embed_dir, "alignment_results_12")
+        # load_weight: scale the mapping probability predicted by the embedding module
         kgs.util.load_ent_links(func=lambda x: load_weight * x, path=ent_links_path, force=True)
 
+    # embedding feedback
     if load_emb is True:
-        base_path = os.path.join(save_path, emb_name)
-        mapping_l, mapping_r = os.path.join(base_path, "kg1_ent_ids"), os.path.join(base_path, "kg2_ent_ids")
-        ent_emb_path = os.path.join(base_path, "ent_embeds.npy")
+        mapping_l, mapping_r = os.path.join(embed_dir, "kg1_ent_ids"), os.path.join(embed_dir, "kg2_ent_ids")
+        ent_emb_path = os.path.join(embed_dir, "ent_embeds.npy")
         kgs.util.load_embedding(ent_emb_path, mapping_l, mapping_r)
-        print("load embedding...")
-        kgs.set_fusion_func(func)
 
-    kgs.run(test_path=path_validation)
-    # save_path = os.path.join(save_path, "links")
-    # kgs.util.generate_input_for_embed_align(link_path=path_validation, save_dir=save_path, threshold=0.1)
-    # kgs.util.save_results(os.path.join(save_path, "EA_Result.txt"))
-    # kgs.util.save_params(os.path.join(save_path, "EA_Params.txt"))
+    # set the function balancing the probability (from PARIS) and the embedding similarity
+    kgs.set_fusion_func(prase_func)
+    kgs.run(test_path=ground_truth_path)
 
-
-parser = argparse.ArgumentParser(description="PARIS_PYTHON")
-
-parser.add_argument('--model', type=str, default="PARIS")
-parser.add_argument('--base', type=str)
-parser.add_argument('--worker', type=int, default=6)
-
-args = parser.parse_args()
 
 if __name__ == '__main__':
-    name, base, worker = args.model, args.base, args.worker
-    data_list = ["industry", "D_W_15K_V2", "D_W_100K_V2", "EN_DE_100K_V2", "EN_FR_100K_V2", "D_Y_100K_V2"]
-    for data_name in data_list:
-        path = os.path.join(base, data_name)
-        # test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=False,
-        #      init_reset=False)
-        # test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=True,
-        #      init_reset=False)
-        # test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=0.5, reset_weight=1.0, load_ent=True,
-        #      init_reset=False)
-        # test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=False,
-        #      load_emb=True,
-        #      init_reset=False, func=fusion_func_8_2)
-        test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=True,
-             load_emb=True,
-             init_reset=False, func=fusion_func_5_5)
-        # test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=True,
-        #      load_emb=True,
-        #      init_reset=False, func=fusion_func_8_2)
-        # test(base=path, emb_name=name, iteration=10, worker=worker, load_weight=1.0, reset_weight=1.0, load_ent=True,
-        #      load_emb=True,
-        #      init_reset=False, func=fusion_func_5_5)
-        print("------------------------------------------------------------------------")
+    base, _ = os.path.split(os.path.abspath(__file__))
+    dataset_name = "D_W_15K_V2"
+    # embed_module_name = "MultiKE"
+    embed_module_name = "BootEA"
+
+    dataset_path = os.path.join(os.path.join(base, "data"), dataset_name)
+    embed_output_path = os.path.join(dataset_path, embed_module_name)
+
+    print("Construct KGs...")
+    # load the KG files from relation and attribute triples to construct the KGs object
+    # use load_chk to load the PARIS model from a check point
+    # note that, due to the limitation of file size, we do not provide the check point file for performing PRASE
+    # surprisingly, it may make the result better than the one reported in the paper
+    kgs = construct_kgs(dataset_dir=dataset_path, name=dataset_name, load_chk=None)
+
+    # set the number of processes
+    kgs.set_worker_num(6)
+
+    # set the iteration number of PARIS
+    kgs.set_iteration(1)
+
+    # ground truth mapping path
+    ground_truth_mapping_path = os.path.join(dataset_path, "ent_links")
+
+    # test the model and show the metrics
+    # kgs.util.test(path=ground_truth_mapping_path, threshold=0.1)
+
+    # using the following line of code to run the initial iteration of PRASE (i.e., PARIS, without any feedback)
+    # the ground truth path is used to show the metrics during the iterations of PARIS
+    # run_init_iteration(kgs=kgs, ground_truth_path=ground_truth_mapping_path)
+
+    # run PRASE using both the embedding and mapping feedback
+    run_prase_iteration(kgs, embed_dir=embed_output_path, prase_func=fusion_func,
+                        ground_truth_path=ground_truth_mapping_path)
+
+    # in the following, we store the mappings and check point files
+    save_dir_name = "output"
+    save_dir_path = os.path.join(os.path.join(base, save_dir_name), dataset_name)
+    if not os.path.exists(save_dir_path):
+        os.makedirs(save_dir_path)
+
+    time_stamp = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+
+    # save the check point
+    check_point_dir = os.path.join(save_dir_path, "chk")
+    check_point_name = "PRASE-" + embed_module_name + "@" + time_stamp
+    check_point_file = os.path.join(check_point_dir, check_point_name)
+    kgs.util.save_params(check_point_file)
+
+    # save the mapping result
+    result_dir = os.path.join(save_dir_path, "mapping")
+    result_file_name = "PRASE-" + embed_module_name + "@" + time_stamp + ".txt"
+    result_file = os.path.join(result_dir, result_file_name)
+    kgs.util.save_results(result_file)
+
+    # generate the input files (training data) for embedding module
+    input_base = os.path.join(save_dir_path, "embed_input")
+    input_dir_name = "PRASE-" + embed_module_name + "@" + time_stamp
+    input_dir = os.path.join(input_base, input_dir_name)
+    kgs.util.generate_input_for_embed_align(link_path=ground_truth_mapping_path, save_dir=input_dir, threshold=0.1)

@@ -218,17 +218,17 @@ class KG:
                 fact_dict_by_head[h.id].append((r.id, t.id))
                 fact_dict_by_tail[t.id].append((r.id, h.id))
 
-        def init_idx_dict(item_set, idx_list):
-            idx_list.clear()
-            idx_list = idx_list + [None for _ in range(len(item_set))]
+        def init_idx_dict(item_set):
+            idx_list = [None for _ in range(len(item_set))]
             for item in item_set:
                 idx_list[item.id] = item
+            return idx_list
 
         init_index(self.entity_set, self.literal_set)
         init_index(self.relation_set, self.attribute_set)
         init_fact_dict(self.relation_tuple_list + self.attribute_tuple_list, self.fact_dict_by_head, self.fact_dict_by_tail)
-        init_idx_dict(self.entity_set | self.literal_set, self.ent_lite_list_by_id)
-        init_idx_dict(self.relation_set | self.attribute_set, self.rel_attr_list_by_id)
+        self.ent_lite_list_by_id = init_idx_dict(self.entity_set | self.literal_set)
+        self.rel_attr_list_by_id = init_idx_dict(self.relation_set | self.attribute_set)
         self.is_literal_list = [False for _ in range(len(self.entity_set))] + [True for _ in range(len(self.literal_set))]
         self.ent_id_list = [item.id for item in self.entity_set]
         self.__calculate_functionality()
