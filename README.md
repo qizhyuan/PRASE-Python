@@ -7,7 +7,7 @@ The packages of PRASE-Python is presented below.
       ├─PRASE-Python
       │  ├─data: necessary data for running the test script
       │  ├─model: the implementation of PARIS
-      │  ├─objects: Entity/Relation/KG/KGs objects of PRASEMap
+      │  ├─objects: Entity/Relation/KG/KGs objects of PRASE
       │  ├─test.py: a test script example
 
 ## Installation
