@@ -124,7 +124,7 @@ if __name__ == '__main__':
     kgs.set_worker_num(6)
 
     # set the iteration number of PARIS
-    kgs.set_iteration(1)
+    kgs.set_iteration(10)
 
     # ground truth mapping path
     ground_truth_mapping_path = os.path.join(dataset_path, "ent_links")
